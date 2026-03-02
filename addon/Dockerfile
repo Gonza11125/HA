@@ -1,13 +1,11 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:latest
+ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Just test if basic build works
-RUN echo "Solar Portal Test Build"
+# Create s6 service directory
+RUN mkdir -p /etc/services.d/solar-portal
 
-# Create simple test script
-RUN echo '#!/bin/bash' > /run.sh && \
-    echo 'echo "Solar Portal is running!"' >> /run.sh && \
-    echo 'tail -f /dev/null' >> /run.sh && \
-    chmod +x /run.sh
-
-CMD ["/run.sh"]
+# Test script
+RUN echo "#!/usr/bin/with-contenv bashio" > /etc/services.d/solar-portal/run && \
+    echo "bashio::log.info 'Solar Portal Test Running!'" >> /etc/services.d/solar-portal/run && \
+    echo "exec tail -f /dev/null" >> /etc/services.d/solar-portal/run && \
+    chmod +x /etc/services.d/solar-portal/run
