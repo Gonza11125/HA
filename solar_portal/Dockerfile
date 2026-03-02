@@ -1,3 +1,6 @@
+# ARG must be before first FROM to be available for final stage
+ARG BUILD_FROM=ghcr.io/home-assistant/aarch64-base:latest
+
 # Build stage - Frontend
 FROM node:18-alpine AS frontend-builder
 WORKDIR /build
@@ -15,7 +18,6 @@ COPY backend/ ./
 RUN npm run build
 
 # Final stage - Home Assistant base image
-ARG BUILD_FROM=ghcr.io/home-assistant/aarch64-base:latest
 FROM ${BUILD_FROM}
 
 # Install Node.js 18 and PostgreSQL client

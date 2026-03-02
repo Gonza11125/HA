@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.2] - 2026-03-02
+
+### 🔧 Opraveno
+- 🐛 Opraven Dockerfile - ARG BUILD_FROM přesunut před první FROM pro multi-stage build
+- ✅ Fix chyby: "base name (${BUILD_FROM}) should not be blank"
+
 ## [0.2.1] - 2026-03-02
 
 ### 🔧 Opraveno
