@@ -1,6 +1,6 @@
 {
   "name": "Solar Portal",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "slug": "solar_portal",
   "description": "Solar energy monitoring portal with Home Assistant integration",
   "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"],

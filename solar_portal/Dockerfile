@@ -39,23 +39,23 @@ COPY --from=backend-builder /build/package.json ./
 WORKDIR /app/frontend
 COPY --from=frontend-builder /build/dist ./dist
 
-# Create s6-overlay service for backend
-RUN mkdir -p /etc/services.d/backend
-RUN echo '#!/usr/bin/with-contenv bashio' > /etc/services.d/backend/run \
-    && echo 'bashio::log.info "Starting Solar Portal Backend..."' >> /etc/services.d/backend/run \
-    && echo 'cd /app/backend' >> /etc/services.d/backend/run \
-    && echo 'export BACKEND_PORT=5000' >> /etc/services.d/backend/run \
-    && echo 'export NODE_ENV=production' >> /etc/services.d/backend/run \
-    && echo 'exec npm start' >> /etc/services.d/backend/run \
-    && chmod a+x /etc/services.d/backend/run
-
-# Create s6-overlay service for frontend
-RUN mkdir -p /etc/services.d/frontend
-RUN echo '#!/usr/bin/with-contenv bashio' > /etc/services.d/frontend/run \
-    && echo 'bashio::log.info "Starting Solar Portal Frontend..."' >> /etc/services.d/frontend/run \
-    && echo 'cd /app/frontend' >> /etc/services.d/frontend/run \
-    && echo 'exec serve -s dist -l 3000' >> /etc/services.d/frontend/run \
-    && chmod a+x /etc/services.d/frontend/run
+# Create single s6-overlay service for Solar Portal
+RUN mkdir -p /etc/services.d/solar-portal
+RUN echo '#!/usr/bin/with-contenv bash' > /etc/services.d/solar-portal/run \
+    && echo 'set -e' >> /etc/services.d/solar-portal/run \
+    && echo 'echo "[INFO] Starting Solar Portal services..."' >> /etc/services.d/solar-portal/run \
+    && echo '' >> /etc/services.d/solar-portal/run \
+    && echo '# Start backend in background' >> /etc/services.d/solar-portal/run \
+    && echo 'cd /app/backend' >> /etc/services.d/solar-portal/run \
+    && echo 'echo "[INFO] Starting backend on port 5000..."' >> /etc/services.d/solar-portal/run \
+    && echo 'NODE_ENV=production npm start &' >> /etc/services.d/solar-portal/run \
+    && echo 'BACKEND_PID=$!' >> /etc/services.d/solar-portal/run \
+    && echo '' >> /etc/services.d/solar-portal/run \
+    && echo '# Start frontend in foreground' >> /etc/services.d/solar-portal/run \
+    && echo 'cd /app/frontend' >> /etc/services.d/solar-portal/run \
+    && echo 'echo "[INFO] Starting frontend on port 3000..."' >> /etc/services.d/solar-portal/run \
+    && echo 'exec serve -s dist -l 3000' >> /etc/services.d/solar-portal/run \
+    && chmod a+x /etc/services.d/solar-portal/run
 
 WORKDIR /app
 

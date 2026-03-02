@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4] - 2026-03-02
+
+### 🔧 Opraveno
+- 🐛 Opraven s6-overlay service script - změna z bashio na bash shell
+- 🔀 Sloučeny backend/frontend services do jednoho solar-portal service
+- ✅ Backend běží na pozadí, frontend v popředí
+
 ## [0.2.3] - 2026-03-02
 
 ### 🔧 Opraveno
