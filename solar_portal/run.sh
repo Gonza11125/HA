@@ -46,11 +46,22 @@ serve -s dist -l 3000 &
 FRONTEND_PID=$!
 echo "[INFO] Frontend started with PID $FRONTEND_PID"
 
+# Give frontend time to start
+sleep 2
+
+# Start agent (data collector)
+cd /app/agent
+echo "[INFO] Starting agent (data collector)..."
+node dist/index.js &
+AGENT_PID=$!
+echo "[INFO] Agent started with PID $AGENT_PID"
+
 echo "[INFO] ========================================="
 echo "[INFO] Solar Portal is running!"
 echo "[INFO] Frontend: http://YOUR_IP:3000"
 echo "[INFO] Backend:  http://YOUR_IP:5000"
+echo "[INFO] Agent:    Collecting data from Home Assistant"
 echo "[INFO] ========================================="
 
 # Wait for all processes
-wait $POSTGRES_PID $BACKEND_PID $FRONTEND_PID
+wait $POSTGRES_PID $BACKEND_PID $FRONTEND_PID $AGENT_PID

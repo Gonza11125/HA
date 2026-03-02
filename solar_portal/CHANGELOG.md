@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.1] - 2026-03-02
+
+### ✨ Přidáno
+- 🤖 Agent nyní automaticky startuje v kontejneru
+- 📊 Sběr dat z Home Assistant aktivní při startu
+- 🔄 Agent posílá data do backendu každých 5 sekund
+
+### 🔧 Opraveno
+- ✅ Agent měl chybějící config.json - nyní zkopírován
+- 🚀 Agent se spouští po frontendu s delay pro stabilitu
+
 ## [0.3.0] - 2026-03-02
 
 ### 🔧 Opraveno
