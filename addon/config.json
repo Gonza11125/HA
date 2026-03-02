@@ -2,9 +2,8 @@
   "name": "Solar Portal",
   "version": "0.1.0",
   "slug": "solar_portal",
-  "description": "Secure web customer portal for Home Assistant solar installations",
-  "url": "https://github.com/Gonza11125/solar-portal-addon",
-  "arch": ["aarch64", "armhf", "armv7", "amd64", "i386"],
+  "description": "Solar energy monitoring portal",
+  "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"],
   "startup": "application",
   "boot": "auto",
   "ports": {
@@ -12,19 +11,14 @@
     "5000/tcp": 5000
   },
   "ports_description": {
-    "3000/tcp": "Frontend (React)",
-    "5000/tcp": "Backend API (Express)"
+    "3000/tcp": "Frontend",
+    "5000/tcp": "Backend API"
   },
   "options": {
-    "log_level": "info",
-    "ha_url": "http://supervisor/core",
-    "frontend_port": 3000,
-    "backend_port": 5000
+    "log_level": "info"
   },
   "schema": {
-    "log_level": "list(trace|debug|info|notice|warning|error|fatal)?",
-    "ha_url": "url",
-    "frontend_port": "port",
-    "backend_port": "port"
-  }
+    "log_level": "list(trace|debug|info|notice|warning|error|fatal)?"
+  },
+  "image": "ghcr.io/gonza11125/solar-portal-{arch}"
 }
