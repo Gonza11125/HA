@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.9] - 2026-03-02
+
+### 🔧 Opraveno
+- 🌐 Frontend API URL nyní používá dynamický hostname místo localhost
+- ✅ Opraveno ERR_CONNECTION_REFUSED při registraci/přihlášení
+- 🔗 API calls nyní správně míří na Home Assistant IP adresu
+
 ## [0.2.8] - 2026-03-02
 
 ### ✨ Přidáno
