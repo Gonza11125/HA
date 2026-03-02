@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.4] - 2026-03-02
+
+### Opraveno
+- 🛠️ Opraven Docker build context (addon-only)
+- ✅ Docker image nyní buildí bez chyb typu ".../agent not found"
+
 ## [0.1.3] - 2026-03-02
 
 ### Opraveno
