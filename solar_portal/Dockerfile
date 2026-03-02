@@ -15,8 +15,8 @@ COPY backend/ ./
 RUN npm run build
 
 # Final stage - Home Assistant base image
-FROM ghcr.io/home-assistant/aarch64-base:latest
 ARG BUILD_FROM=ghcr.io/home-assistant/aarch64-base:latest
+FROM ${BUILD_FROM}
 
 # Install Node.js 18 and PostgreSQL client
 RUN apk add --no-cache \
