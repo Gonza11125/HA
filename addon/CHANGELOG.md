@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.3] - 2026-03-02
+
+### Opraveno
+- 🔄 Navýšení verze pro vynucené obnovení repozitáře v Home Assistant
+- 🧹 Vyčištění metadat kvůli cache konfliktům při instalaci add-onu
+
 ## [0.1.0] - 2026-03-02
 
 ### Přidáno
