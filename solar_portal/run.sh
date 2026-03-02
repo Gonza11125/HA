@@ -5,10 +5,34 @@ echo "[INFO] ========================================="
 echo "[INFO] Solar Portal Add-on Starting..."
 echo "[INFO] ========================================="
 
+# Initialize and start PostgreSQL
+echo "[INFO] Initializing PostgreSQL database..."
+mkdir -p /data/postgres
+chown postgres:postgres /data/postgres
+
+# Initialize database if not exists
+if [ ! -d "/data/postgres/base" ]; then
+    su postgres -c "initdb -D /data/postgres"
+    echo "[INFO] PostgreSQL initialized"
+fi
+
+# Start PostgreSQL
+su postgres -c "postgres -D /data/postgres" &
+POSTGRES_PID=$!
+echo "[INFO] PostgreSQL started with PID $POSTGRES_PID"
+
+# Wait for PostgreSQL to be ready
+echo "[INFO] Waiting for PostgreSQL to be ready..."
+sleep 5
+
+# Create database if not exists
+su postgres -c "psql -lqt" | cut -d \| -f 1 | grep -qw solar_portal || su postgres -c "createdb solar_portal"
+echo "[INFO] Database 'solar_portal' ready"
+
 # Start backend
 cd /app/backend
 echo "[INFO] Starting backend on port 5000..."
-NODE_ENV=production PORT=5000 npm start &
+DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_NAME=solar_portal NODE_ENV=production PORT=5000 npm start &
 BACKEND_PID=$!
 echo "[INFO] Backend started with PID $BACKEND_PID"
 
@@ -28,5 +52,5 @@ echo "[INFO] Frontend: http://YOUR_IP:3000"
 echo "[INFO] Backend:  http://YOUR_IP:5000"
 echo "[INFO] ========================================="
 
-# Wait for both processes
-wait $BACKEND_PID $FRONTEND_PID
+# Wait for all processes
+wait $POSTGRES_PID $BACKEND_PID $FRONTEND_PID

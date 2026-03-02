@@ -17,10 +17,13 @@ RUN npm run build
 # Final stage - Use clean Alpine (no s6-overlay conflicts)
 FROM node:18-alpine
 
-# Install additional tools
+# Install additional tools and PostgreSQL
 RUN apk add --no-cache \
     bash \
-    postgresql-client
+    postgresql \
+    postgresql-client \
+    && mkdir -p /run/postgresql \
+    && chown postgres:postgres /run/postgresql
 
 # Install serve for frontend (lightweight static server)
 RUN npm install -g serve

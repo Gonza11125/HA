@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.8] - 2026-03-02
+
+### ✨ Přidáno
+- 💾 PostgreSQL server do kontejneru (pro funkční registraci/login)
+- 🔄 Automatická inicializace PostgreSQL při prvním startu
+- 🏛️ Vytvoření databáze solar_portal při startu
+- ✅ Backend nyní má funkční databázi
+
 ## [0.2.7] - 2026-03-02
 
 ### 🔧 Opraveno
