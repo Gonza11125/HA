@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6] - 2026-03-02
+
+### 🔧 Opraveno
+- 💥 Přepnuto z Home Assistant base image na čistý node:18-alpine
+- ✅ Odstraněn konflikt se zabudovaným s6-overlay ENTRYPOINT v HA base image
+- 🚀 Build.yaml aktualizován na node:18-alpine pro všechny architektury
+
 ## [0.2.5] - 2026-03-02
 
 ### 🔧 Opraveno
