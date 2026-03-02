@@ -1,28 +1,13 @@
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:latest
 FROM ${BUILD_FROM}
 
-# Install Node.js
-RUN apk add --no-cache nodejs npm bash
+# Just test if basic build works
+RUN echo "Solar Portal Test Build"
 
-# Create app directory
-WORKDIR /app
+# Create simple test script
+RUN echo '#!/bin/bash' > /run.sh && \
+    echo 'echo "Solar Portal is running!"' >> /run.sh && \
+    echo 'tail -f /dev/null' >> /run.sh && \
+    chmod +x /run.sh
 
-# Copy project files
-COPY backend /app/backend
-COPY frontend /app/frontend
-COPY agent /app/agent
-
-# Install dependencies (no build)
-RUN cd /app/backend && npm install --omit=dev
-RUN cd /app/frontend && npm install
-RUN cd /app/agent && npm install --omit=dev
-
-# Copy entrypoint
-COPY addon/rootfs/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Expose ports
-EXPOSE 3000 5000
-
-# Start
-CMD ["/entrypoint.sh"]
+CMD ["/run.sh"]
