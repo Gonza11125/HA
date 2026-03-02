@@ -2,6 +2,7 @@ name: Solar Portal
 description: Solar energy monitoring portal with Home Assistant integration
 version: 0.1.0
 slug: solar_portal
+url: https://github.com/Gonza11125/HA
 codeowners:
   - "@honzik"
 startup: application
@@ -21,22 +22,9 @@ options:
   frontend_port: 3000
   backend_port: 5000
 schema:
-  log_level: selector
-  ha_url:
-    selector:
-      text:
-        type: url
-  frontend_port:
-    selector:
-      number:
-        mode: box
-        min: 1024
-        max: 65535
-  backend_port:
-    selector:
-      number:
-        mode: box
-        min: 1024
-        max: 65535
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
+  ha_url: url
+  frontend_port: port
+  backend_port: port
 requirements:
   - "docker"
