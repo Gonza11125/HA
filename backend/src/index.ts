@@ -29,10 +29,33 @@ const PORT = process.env.BACKEND_PORT || 5000;
 // Security
 app.use(helmet());
 
-// CORS configuration
-const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
+// CORS configuration - allow localhost and local network IPs
 const corsOptions = {
-  origin: corsOrigin,
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Allow localhost for development
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+    
+    // Allow local network IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    const localNetworkPattern = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
+    if (localNetworkPattern.test(origin)) {
+      return callback(null, true);
+    }
+    
+    // Allow custom CORS_ORIGIN from environment
+    if (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN) {
+      return callback(null, true);
+    }
+    
+    // Reject all other origins
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

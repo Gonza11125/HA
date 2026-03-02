@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0] - 2026-03-02
+
+### 🔧 Opraveno
+- 🔐 CORS policy nyní akceptuje requesty z Home Assistant serveru (nejen localhost)
+- 🌐 Backend dynamicky povoluje origins z lokální sítě (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+- ✅ Opraveny CORS chyby při registraci/přihlášení
+- 🛡️ Zachována podpora localhost pro development
+
 ## [0.2.9] - 2026-03-02
 
 ### 🔧 Opraveno
