@@ -58,3 +58,6 @@ RUN echo '#!/usr/bin/with-contenv bashio' > /etc/services.d/frontend/run \
     && chmod a+x /etc/services.d/frontend/run
 
 WORKDIR /app
+
+# Start s6-overlay as PID 1
+CMD [ "/init" ]

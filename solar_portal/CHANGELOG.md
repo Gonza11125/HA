@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.3] - 2026-03-02
+
+### 🔧 Opraveno
+- 🐛 Přidán CMD [ "/init" ] do Dockerfile - spouští s6-overlay jako PID 1
+- ✅ Fix chyby: "s6-overlay-suexec: fatal: can only run as pid 1"
+
 ## [0.2.2] - 2026-03-02
 
 ### 🔧 Opraveno
