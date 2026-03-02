@@ -1,6 +1,6 @@
 {
   "name": "Solar Portal",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "slug": "solar_portal",
   "description": "Solar energy monitoring portal",
   "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"],

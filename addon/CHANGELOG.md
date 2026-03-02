@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.5] - 2026-03-02
+
+### Opraveno
+- 🧱 Opraveny base image registry cesty v build.yaml
+- ✅ Opraven ARG BUILD_FROM default v Dockerfile
+
 ## [0.1.4] - 2026-03-02
 
 ### Opraveno
