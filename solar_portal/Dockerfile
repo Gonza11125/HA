@@ -39,25 +39,11 @@ COPY --from=backend-builder /build/package.json ./
 WORKDIR /app/frontend
 COPY --from=frontend-builder /build/dist ./dist
 
-# Create single s6-overlay service for Solar Portal
-RUN mkdir -p /etc/services.d/solar-portal
-RUN echo '#!/usr/bin/with-contenv bash' > /etc/services.d/solar-portal/run \
-    && echo 'set -e' >> /etc/services.d/solar-portal/run \
-    && echo 'echo "[INFO] Starting Solar Portal services..."' >> /etc/services.d/solar-portal/run \
-    && echo '' >> /etc/services.d/solar-portal/run \
-    && echo '# Start backend in background' >> /etc/services.d/solar-portal/run \
-    && echo 'cd /app/backend' >> /etc/services.d/solar-portal/run \
-    && echo 'echo "[INFO] Starting backend on port 5000..."' >> /etc/services.d/solar-portal/run \
-    && echo 'NODE_ENV=production npm start &' >> /etc/services.d/solar-portal/run \
-    && echo 'BACKEND_PID=$!' >> /etc/services.d/solar-portal/run \
-    && echo '' >> /etc/services.d/solar-portal/run \
-    && echo '# Start frontend in foreground' >> /etc/services.d/solar-portal/run \
-    && echo 'cd /app/frontend' >> /etc/services.d/solar-portal/run \
-    && echo 'echo "[INFO] Starting frontend on port 3000..."' >> /etc/services.d/solar-portal/run \
-    && echo 'exec serve -s dist -l 3000' >> /etc/services.d/solar-portal/run \
-    && chmod a+x /etc/services.d/solar-portal/run
+# Copy startup script
+COPY run.sh /
+RUN chmod +x /run.sh
 
 WORKDIR /app
 
-# Start s6-overlay as PID 1
-CMD [ "/init" ]
+# Start services directly (no s6-overlay services needed for simple case)
+CMD ["/run.sh"]

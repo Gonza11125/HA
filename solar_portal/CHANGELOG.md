@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5] - 2026-03-02
+
+### 🔧 Opraveno
+- 🚀 Odstraněny s6-overlay services úplně - příliš komplikované
+- 📝 Vytvořen jednoduchý run.sh script pro start backend/frontend
+- ✅ Přímý start přes CMD ["/run.sh"] místo /init
+
 ## [0.2.4] - 2026-03-02
 
 ### 🔧 Opraveno
