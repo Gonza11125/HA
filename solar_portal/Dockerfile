@@ -21,8 +21,6 @@ FROM node:18-alpine
 RUN apk add --no-cache \
     bash \
     postgresql-client
-    npm \
-    postgresql-client
 
 # Install serve for frontend (lightweight static server)
 RUN npm install -g serve

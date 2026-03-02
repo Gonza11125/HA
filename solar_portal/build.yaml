@@ -1,6 +1,6 @@
 build_from:
-  aarch64: node:18-alpine
-  amd64: node:18-alpine
-  armhf: node:18-alpine
-  armv7: node:18-alpine
-  i386: node:18-alpine
+  aarch64: docker.io/library/node:18-alpine
+  amd64: docker.io/library/node:18-alpine
+  armhf: docker.io/library/node:18-alpine
+  armv7: docker.io/library/node:18-alpine
+  i386: docker.io/library/node:18-alpine

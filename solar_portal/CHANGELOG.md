@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.7] - 2026-03-02
+
+### 🔧 Opraveno
+- 🐛 Opraven Dockerfile syntax error (duplicitní řádky)
+- 📝 build.yaml - přidána plná Docker Hub cesta: docker.io/library/node:18-alpine
+- ✅ HA regex validace nyní projde
+
 ## [0.2.6] - 2026-03-02
 
 ### 🔧 Opraveno
