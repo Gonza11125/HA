@@ -1,42 +1,28 @@
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:latest
 FROM ${BUILD_FROM}
 
-# Install dependencies
-RUN apk add --no-cache \
-    nodejs \
-    npm \
-    bash
+# Install Node.js
+RUN apk add --no-cache nodejs npm bash
 
-# Set working directory
+# Create app directory
 WORKDIR /app
 
-# Copy entire project
-COPY . /app
+# Copy project files
+COPY backend /app/backend
+COPY frontend /app/frontend
+COPY agent /app/agent
 
-# Install backend dependencies
-WORKDIR /app/backend
-RUN npm install && \
-    npm run build || echo "Backend build skipped"
+# Install dependencies (no build)
+RUN cd /app/backend && npm install --omit=dev
+RUN cd /app/frontend && npm install
+RUN cd /app/agent && npm install --omit=dev
 
-# Install frontend dependencies  
-WORKDIR /app/frontend
-RUN npm install && \
-    npm run build || echo "Frontend build skipped"
-
-# Install agent dependencies
-WORKDIR /app/agent
-RUN npm install && \
-    npm run build || echo "Agent build skipped"
-
-# Install http-server globally
-RUN npm install -g http-server
-
-# Setup entrypoint
-WORKDIR /app
-RUN chmod +x /app/addon/rootfs/entrypoint.sh
+# Copy entrypoint
+COPY addon/rootfs/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Expose ports
 EXPOSE 3000 5000
 
-# Run entrypoint
-CMD ["/app/addon/rootfs/entrypoint.sh"]
+# Start
+CMD ["/entrypoint.sh"]
