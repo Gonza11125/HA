@@ -82,12 +82,34 @@ echo -e "${GREEN}📡 Backend API: http://homeassistant:$BACKEND_PORT/api${NC}"
 echo ""
 echo -e "${YELLOW}⏳ Starting services...${NC}"
 
-# Change to app directory
-cd /app
+# Start backend
+cd /app/backend
+echo "Starting backend on port $BACKEND_PORT..."
+node dist/index.js &
+BACKEND_PID=$!
 
-# Export for s6
-export SERVICE_PORT=$BACKEND_PORT
-export FRONTEND_PORT=$FRONTEND_PORT
+# Start frontend
+cd /app/frontend
+echo "Starting frontend on port $FRONTEND_PORT..."
+if [ -d "dist" ]; then
+    serve -s dist -l $FRONTEND_PORT &
+else
+    echo "Frontend dist not found, skipping..."
+fi
+FRONTEND_PID=$!
 
-# Execute s6 init (built into Home Assistant base image)
-exec /init
+# Start agent if enabled
+if [ "$ENABLE_AGENT" = "true" ]; then
+    cd /app/agent
+    echo "Starting agent..."
+    node dist/index.js &
+    AGENT_PID=$!
+fi
+
+echo -e "${GREEN}✅ All services started!${NC}"
+
+# Wait for any process to exit
+wait -n
+
+# Exit with status of process that exited first
+exit $?
