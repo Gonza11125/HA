@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1] - 2026-03-02
+
+### 🔧 Opraveno
+- ❌ Odstraněn nepodporovaný `postgres:provide` z services (HA podporuje jen mqtt/mysql)
+- 🗂️ Přejmenován `agent/config.json` → `agent/config.json.bak` (aby HA nečetl jako add-on config)
+
 ## [0.2.0] - 2026-03-02
 
 ### ✨ Přidáno
