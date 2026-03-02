@@ -1,8 +1,8 @@
 {
   "name": "Solar Portal",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "slug": "solar_portal",
-  "description": "Solar energy monitoring portal",
+  "description": "Solar energy monitoring portal with Home Assistant integration",
   "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"],
   "startup": "application",
   "boot": "auto",
@@ -11,13 +11,23 @@
     "5000/tcp": 5000
   },
   "ports_description": {
-    "3000/tcp": "Frontend",
+    "3000/tcp": "Web Frontend",
     "5000/tcp": "Backend API"
   },
+  "services": ["postgres:provide"],
   "options": {
-    "log_level": "info"
+    "log_level": "info",
+    "database_name": "solar_portal",
+    "jwt_secret": "",
+    "session_secret": ""
   },
   "schema": {
-    "log_level": "list(trace|debug|info|notice|warning|error|fatal)?"
+    "log_level": "list(trace|debug|info|notice|warning|error|fatal)?",
+    "database_name": "str",
+    "jwt_secret": "password",
+    "session_secret": "password"
+  },
+  "environment": {
+    "NODE_ENV": "production"
   }
 }

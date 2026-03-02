@@ -1,0 +1,40 @@
+{
+  "pairingCode": "150N6E",
+  "deviceToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkZXZpY2VJZCI6IjFiOTM5OTJjLWFmY2QtNDA2OS04ODI2LWVlYTUyZmMxZTM5NCIsInNpdGVJZCI6ImRlbW8tc2l0ZSIsImlhdCI6MTc3MjQzOTUwNCwiZXhwIjoxODAzOTc1NTA0fQ.BtHZhqM7_0dT9IMSTmiasxU6Qs2FweaseGSQArbiZlU",
+  "haUrl": "http://192.168.254.39:8123",
+  "haToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJlYzZkNWYzOTJhOWI0OTc2OTU0MTJkYzRiNWRmNTExOCIsImlhdCI6MTc3MjQzNzIwNCwiZXhwIjoyMDg3Nzk3MjA0fQ.lda8hnRwAwmcU9Bvtnbk_bPQ5mxH6SZ0AcjtLufvUHU",
+  "cloudUrl": "http://localhost:5000/api",
+  "pollingInterval": 5000,
+  "entityMappings": [
+    {
+      "type": "power_now",
+      "entityId": "sensor.solax_inverter_output_power",
+      "friendlyName": "SolaX Output Power",
+      "unit": "W"
+    },
+    {
+      "type": "energy_today",
+      "entityId": "sensor.solax_inverter_energy_today",
+      "friendlyName": "SolaX Energy Today",
+      "unit": "kWh"
+    },
+    {
+      "type": "battery_soc",
+      "entityId": "sensor.solax_inverter_battery_capacity",
+      "friendlyName": "SolaX Battery Capacity",
+      "unit": "%"
+    },
+    {
+      "type": "battery_voltage",
+      "entityId": "sensor.solax_inverter_battery_voltage_charge",
+      "friendlyName": "SolaX Battery Voltage",
+      "unit": "V"
+    },
+    {
+      "type": "temperature",
+      "entityId": "sensor.solax_inverter_battery_temperature",
+      "friendlyName": "SolaX Battery Temperature",
+      "unit": "°C"
+    }
+  ]
+}

@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.0] - 2026-03-02
+
+### ✨ Přidáno
+- 🚀 Kompletní aplikační kód (backend + frontend + agent)
+- 📊 Frontend React aplikace běžící na portu 3000
+- ⚡ Backend Express API server na portu 5000
+- 🗄️ PostgreSQL database integrace přes Home Assistant Supervisor
+- 🔐 Konfigurace JWT a session secrets v options
+- 📝 Multi-stage Docker build pro optimalizaci velikosti image
+
+### 🔧 Změněno
+- 🏗️ Dockerfile kompletně přepsán pro produkční deployment
+- ⚙️ Přidány s6-overlay services pro backend a frontend
+- 🎯 Aktualizována config.json s database services a options schema
+
 ## [0.1.5] - 2026-03-02
 
 ### Opraveno

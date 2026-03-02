@@ -1,0 +1,84 @@
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import { logger } from '../utils/logger';
+
+export interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: 'customer' | 'admin';
+  };
+  device?: {
+    id: string;
+    siteId: string;
+  };
+  cookies: Record<string, string>;
+  headers: Record<string, string | string[] | undefined>;
+}
+
+export function authenticate(req: AuthRequest, res: Response, next: NextFunction): void {
+  try {
+    const token = req.cookies.accessToken || extractTokenFromHeader(req);
+
+    if (!token) {
+      res.status(401).json({ error: 'No authentication token provided' });
+      return;
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    req.user = {
+      id: decoded.userId,
+      email: decoded.email,
+      role: decoded.role || 'customer'
+    };
+
+    next();
+  } catch (error) {
+    logger.warn('Authentication failed:', error);
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+export function authenticateDevice(req: AuthRequest, res: Response, next: NextFunction): void {
+  try {
+    const token = req.headers['x-device-token'] as string;
+
+    if (!token) {
+      res.status(401).json({ error: 'No device token provided' });
+      return;
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    req.device = {
+      id: decoded.deviceId,
+      siteId: decoded.siteId
+    };
+
+    next();
+  } catch (error) {
+    logger.warn('Device authentication failed:', error);
+    res.status(401).json({ error: 'Invalid device token' });
+  }
+}
+
+export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction): void {
+  if (!req.user) {
+    res.status(401).json({ error: 'Not authenticated' });
+    return;
+  }
+
+  if (req.user.role !== 'admin') {
+    res.status(403).json({ error: 'Admin access required' });
+    return;
+  }
+
+  next();
+}
+
+function extractTokenFromHeader(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  return null;
+}

@@ -1,0 +1,11 @@
+{
+  "haUrl": "http://192.168.254.39:8123",
+  "haToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJlYzZkNWYzOTJhOWI0OTc2OTU0MTJkYzRiNWRmNTExOCIsImlhdCI6MTc3MjQzNzIwNCwiZXhwIjoyMDg3Nzk3MjA0fQ.lda8hnRwAwmcU9Bvtnbk_bPQ5mxH6SZ0AcjtLufvUHU",
+  "haIntegrationId": "01KJMB9KVJZTJBNYGEJY2527AN",
+  "backendUrl": "http://localhost:5000",
+  "sensors": [],
+  "pollInterval": 5,
+  "pairingCode": "",
+  "deviceToken": "",
+  "deviceId": ""
+}
