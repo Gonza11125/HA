@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2] - 2026-03-02
+
+### 🔧 Opraveno
+- 🐋 Agent nyní správně zkompilován a zkopírován do Docker image
+- 📦 Přidán agent-builder stage do Dockerfile (multi-stage build)
+- ✅ Opravena chyba "cd: /app/agent: No such file or directory"
+
 ## [0.3.1] - 2026-03-02
 
 ### ✨ Přidáno

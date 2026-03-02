@@ -14,6 +14,14 @@ RUN npm ci
 COPY backend/ ./
 RUN npm run build
 
+# Build stage - Agent
+FROM node:18-alpine AS agent-builder
+WORKDIR /build
+COPY agent/package*.json ./
+RUN npm ci
+COPY agent/ ./
+RUN npm run build
+
 # Final stage - Use clean Alpine (no s6-overlay conflicts)
 FROM node:18-alpine
 
@@ -37,6 +45,13 @@ COPY --from=backend-builder /build/package.json ./
 # Copy built frontend
 WORKDIR /app/frontend
 COPY --from=frontend-builder /build/dist ./dist
+
+# Copy built agent
+WORKDIR /app/agent
+COPY --from=agent-builder /build/dist ./dist
+COPY --from=agent-builder /build/node_modules ./node_modules
+COPY --from=agent-builder /build/package.json ./
+COPY agent/config.json ./
 
 # Copy startup script
 COPY run.sh /
