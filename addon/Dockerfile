@@ -7,10 +7,10 @@ RUN apk add --no-cache nodejs npm
 # Create app directory
 WORKDIR /app
 
-# Copy project (build context is repository root)
-COPY backend ./backend
-COPY frontend ./frontend
-COPY agent ./agent
+# Copy from parent directory (one level up from addon/)
+COPY ../backend ./backend
+COPY ../frontend ./frontend  
+COPY ../agent ./agent
 
 # Install backend
 WORKDIR /app/backend
@@ -24,7 +24,7 @@ RUN npm install
 WORKDIR /app/agent
 RUN npm install
 
-# Create test script
+# Create service
 WORKDIR /app
 RUN mkdir -p /etc/services.d/solar-portal && \
     echo "#!/usr/bin/with-contenv bashio" > /etc/services.d/solar-portal/run && \

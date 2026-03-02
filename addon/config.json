@@ -1,6 +1,6 @@
 {
   "name": "Solar Portal",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "slug": "solar_portal",
   "description": "Solar energy monitoring portal",
   "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"],
@@ -19,6 +19,5 @@
   },
   "schema": {
     "log_level": "list(trace|debug|info|notice|warning|error|fatal)?"
-  },
-  "image": "ghcr.io/gonza11125/solar-portal-{arch}"
+  }
 }
