@@ -1,0 +1,105 @@
+# Mock Solar Sensors pro Home Assistant Testing
+
+# Přidej do configuration.yaml v Home Assistant
+
+sensor:
+  # Mock Solar Power (0-5000W s denním cyklem)
+  - platform: template
+    sensors:
+      mock_inverter_power:
+        friendly_name: "Mock Inverter Power"
+        unit_of_measurement: "W"
+        device_class: power
+        value_template: >
+          {% set hour = now().hour %}
+          {% if hour >= 6 and hour <= 18 %}
+            {% set base = (hour - 6) * 400 if hour <= 12 else (18 - hour) * 400 %}
+            {{ (base + (range(-200, 200) | random)) | max(0) }}
+          {% else %}
+            0
+          {% endif %}
+
+      mock_solar_energy_today:
+        friendly_name: "Mock Solar Energy Today"
+        unit_of_measurement: "kWh"
+        device_class: energy
+        value_template: >
+          {% set hour = now().hour %}
+          {{ (hour * 2.5 + (range(0, 5) | random)) | round(2) }}
+
+      mock_battery_soc:
+        friendly_name: "Mock Battery State of Charge"
+        unit_of_measurement: "%"
+        device_class: battery
+        value_template: >
+          {{ (50 + (now().hour * 2) + (range(-10, 10) | random)) | int | max(20) | min(100) }}
+
+      mock_battery_power:
+        friendly_name: "Mock Battery Power"
+        unit_of_measurement: "W"
+        device_class: power
+        value_template: >
+          {% set soc = states('sensor.mock_battery_soc') | float %}
+          {% if soc < 50 %}
+            {{ range(500, 2000) | random }}
+          {% elif soc > 80 %}
+            {{ range(-2000, -500) | random }}
+          {% else %}
+            {{ range(-500, 500) | random }}
+          {% endif %}
+
+      mock_battery_voltage:
+        friendly_name: "Mock Battery Voltage"
+        unit_of_measurement: "V"
+        device_class: voltage
+        value_template: >
+          {{ (48.5 + (range(-5, 5) | random) / 10) | round(1) }}
+
+      mock_inverter_temperature:
+        friendly_name: "Mock Inverter Temperature"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        value_template: >
+          {% set power = states('sensor.mock_inverter_power') | float %}
+          {% set base_temp = 25 + (power / 200) %}
+          {{ (base_temp + (range(-2, 2) | random)) | round(1) }}
+
+      mock_grid_power:
+        friendly_name: "Mock Grid Power"
+        unit_of_measurement: "W"
+        device_class: power
+        value_template: >
+          {{ range(-3000, 2000) | random }}
+
+      mock_load_power:
+        friendly_name: "Mock Load Power"
+        unit_of_measurement: "W"
+        device_class: power
+        value_template: >
+          {{ range(800, 3500) | random }}
+
+      mock_pv_voltage:
+        friendly_name: "Mock PV Voltage"
+        unit_of_measurement: "V"
+        device_class: voltage
+        value_template: >
+          {% set hour = now().hour %}
+          {% if hour >= 6 and hour <= 18 %}
+            {{ (350 + (range(-20, 20) | random)) | round(1) }}
+          {% else %}
+            0
+          {% endif %}
+
+      mock_daily_charge:
+        friendly_name: "Mock Daily Battery Charge"
+        unit_of_measurement: "kWh"
+        device_class: energy
+        value_template: >
+          {{ (states('sensor.mock_solar_energy_today') | float * 0.7) | round(2) }}
+
+      mock_daily_discharge:
+        friendly_name: "Mock Daily Battery Discharge"
+        unit_of_measurement: "kWh"
+        device_class: energy
+        value_template: >
+          {{ (states('sensor.mock_solar_energy_today') | float * 0.5) | round(2) }}

@@ -1,0 +1,72 @@
+# Environment
+.env
+.env.local
+.env.*.local
+.env.production.local
+
+# Dependencies
+node_modules/
+npm-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Production build
+dist/
+build/
+.next/
+.nuxt/
+out/
+
+# Misc
+.DS_Store
+.AppleDouble
+.LSOverride
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.env.local
+.vscode-test/
+vscode-test/
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Database
+*.sql
+!migrations/**/*.sql
+*.sqlite
+*.db
+
+# Logs
+logs/
+*.log
+log.txt
+debug.log
+
+# Docker
+docker-compose.override.yml
+
+# Certificates (use Let's Encrypt)
+certs/*.pem
+certs/*.crt
+certs/*.key
+
+# Backups
+backups/>*
+*.backup
+*.sql.gz
+
+# Agent config (keep examples only)
+agent/config.json
+!agent/config.example.json
+
+# OS
+.DS_Store
+Thumbs.db
+.env.*.bak
