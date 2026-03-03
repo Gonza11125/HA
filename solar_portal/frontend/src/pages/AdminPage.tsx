@@ -35,39 +35,42 @@ export const AdminPage = () => {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="mt-1 text-gray-600">Manage users, devices, and system settings</p>
+        </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm font-medium">Total Users</p>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalUsers}</p>
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-600">Total Users</p>
+            <p className="mt-2 text-3xl font-bold text-gray-900">{stats.totalUsers}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm font-medium">Active Devices</p>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{stats.activeDevices}</p>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-600">Active Devices</p>
+            <p className="mt-2 text-3xl font-bold text-gray-900">{stats.activeDevices}</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm font-medium">Total Energy</p>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalEnergy} kWh</p>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-600">Total Energy</p>
+            <p className="mt-2 text-3xl font-bold text-gray-900">{stats.totalEnergy} kWh</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm font-medium">System Uptime</p>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{stats.systemUptime}%</p>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-medium text-gray-600">System Uptime</p>
+            <p className="mt-2 text-3xl font-bold text-gray-900">{stats.systemUptime}%</p>
           </div>
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="border-b border-gray-200 p-6">
             <h2 className="text-xl font-semibold text-gray-900">Users</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="border-b border-gray-200 bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Name</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
@@ -78,20 +81,20 @@ export const AdminPage = () => {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-900 font-medium">{user.fullName}</td>
+                  <tr key={user.id} className="border-b border-gray-200 transition hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.fullName}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
                     <td className="px-6 py-4 text-sm">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                      <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
                         {user.role}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{user.createdAt}</td>
                     <td className="px-6 py-4 text-sm">
-                      <button className="text-indigo-600 hover:text-indigo-900 font-medium mr-4">
+                      <button className="mr-4 font-medium text-blue-600 transition hover:text-blue-700">
                         Edit
                       </button>
-                      <button className="text-red-600 hover:text-red-900 font-medium">
+                      <button className="font-medium text-red-600 transition hover:text-red-700">
                         Delete
                       </button>
                     </td>

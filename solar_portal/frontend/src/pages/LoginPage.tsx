@@ -4,9 +4,11 @@ import { useAuthStore } from '../hooks/useAuthStore'
 import { apiClient } from '../utils/api'
 
 export const LoginPage = () => {
-  const [accessCode, setAccessCode] = useState('')
-  const [rememberMe, setRememberMe] = useState(true)
-  const [hasAccessCode, setHasAccessCode] = useState<boolean | null>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [installationPassword, setInstallationPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
+  const [canRegister, setCanRegister] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null)
@@ -14,127 +16,148 @@ export const LoginPage = () => {
   const { setUser } = useAuthStore()
 
   useEffect(() => {
-    const loadStatus = async () => {
+    const loadData = async () => {
       try {
-        const { data } = await apiClient.get('/auth/registration-status')
-        setHasAccessCode(Boolean(data?.hasAccessCode))
+        // Check registration status
+        const { data: regData } = await apiClient.get('/auth/registration-status')
+        setCanRegister(Boolean(regData.canRegister))
       } catch {
-        setHasAccessCode(false)
+        setCanRegister(true)
       }
     }
 
-    loadStatus()
+    loadData()
   }, [])
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     setError('')
-    setAttemptsRemaining(null)
     setIsLoading(true)
 
     try {
       const { data } = await apiClient.post('/auth/login', {
-        accessCode,
-        rememberMe,
+        email,
+        password,
+        installationPassword,
+        rememberMe
       })
 
+      // Set user in store
       setUser(data.user)
+
+      // Redirect to dashboard
       navigate('/dashboard')
     } catch (err: any) {
-      const remaining = err?.response?.data?.attemptsRemaining
+      const remaining = err.response?.data?.attemptsRemaining
       if (remaining !== undefined) {
         setAttemptsRemaining(remaining)
       }
-      setError(err?.response?.data?.error || 'Přihlášení selhalo. Zkuste to znovu.')
+      setError(err.response?.data?.error || 'Přihlášení selhalo. Zkuste znovu.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (hasAccessCode === null) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
-        <div className="text-slate-200">Načítání…</div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/80 shadow-2xl shadow-slate-950 p-8">
-        <div className="text-center mb-8">
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-400 mb-3">Solar Portal</p>
-          <h1 className="text-3xl font-semibold mb-2">Secure Access</h1>
-          <p className="text-sm text-slate-400">Přihlášení jedním trvalým kódem instalace</p>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-4xl shadow-lg">☀️</div>
+          <h1 className="text-3xl font-bold text-gray-900">Solar Portal</h1>
+          <p className="mt-2 text-gray-600">Přihlaste se k vaší solární instalaci</p>
         </div>
 
-        {!hasAccessCode ? (
-          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
-            Přístupový kód ještě není vytvořen. Nejdřív dokončete první aktivaci.
-            <div className="mt-4">
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center rounded-lg bg-amber-400 text-slate-900 px-4 py-2 font-semibold hover:bg-amber-300 transition"
-              >
-                Vytvořit první kód
-              </Link>
-            </div>
-          </div>
-        ) : (
+        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
+
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
-                {attemptsRemaining !== null && (
-                  <p className="text-xs mt-1 text-rose-300">Zbývající pokusy: {attemptsRemaining}</p>
-                )}
+                {attemptsRemaining !== null && <p className="mt-1 text-xs">Zbývá pokusů: {attemptsRemaining}</p>}
               </div>
             )}
 
-            <div>
-              <label htmlFor="accessCode" className="block text-sm font-medium text-slate-200 mb-2">
-                Přístupový kód
-              </label>
-              <input
-                id="accessCode"
-                type="text"
-                value={accessCode}
-                onChange={(event) => setAccessCode(event.target.value.toUpperCase())}
-                required
-                autoComplete="off"
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-base tracking-[0.18em] uppercase font-mono focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                placeholder="AB12CD34"
-                disabled={isLoading}
-              />
-              <p className="mt-2 text-xs text-slate-500">Použij stejný kód při každém přihlášení.</p>
-            </div>
-
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(event) => setRememberMe(event.target.checked)}
-                disabled={isLoading}
-                className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
-              />
-              Zapamatovat přihlášení (24 hodin)
+          <div>
+            <label htmlFor="installationPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              Instalační heslo *
             </label>
+            <input
+              id="installationPassword"
+              type="text"
+              value={installationPassword}
+              onChange={(e) => setInstallationPassword(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono text-sm"
+              placeholder="Vložte instalační heslo"
+              disabled={isLoading}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Instalační heslo bylo zobrazeno při první registraci
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              E-mailová adresa
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              placeholder="vas@email.cz"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              Heslo k účtu
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              placeholder="••••••••"
+              disabled={isLoading}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              disabled={isLoading}
+              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+            />
+            <span className="text-sm text-gray-700">Zůstat přihlášen (24 hodin)</span>
+          </label>
 
             <button
               type="submit"
-              disabled={isLoading || !accessCode.trim()}
-              className="w-full rounded-xl bg-cyan-500 text-slate-950 font-semibold py-3 hover:bg-cyan-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading || !installationPassword}
+              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
             >
-              {isLoading ? 'Přihlašování…' : 'Přihlásit'}
+              {isLoading ? 'Přihlašování...' : 'Přihlásit se'}
             </button>
           </form>
-        )}
 
-        <div className="mt-8 text-center text-xs text-slate-500">
-          Potřebuješ první nastavení?{' '}
-          <Link to="/register" className="text-cyan-400 hover:text-cyan-300 font-medium">
-            Aktivace systému
-          </Link>
+          {canRegister && (
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Nemáte účet?{' '}
+                <Link to="/register" className="font-medium text-blue-600 hover:text-blue-700">
+                  Zaregistrujte se
+                </Link>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

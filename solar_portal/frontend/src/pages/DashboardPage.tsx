@@ -1,16 +1,39 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
+import { useAuthStore } from '../hooks/useAuthStore'
 import { MetricCard } from '../components/MetricCard'
 import { Chart } from '../components/Chart'
-import Header from '../components/Header'
 import useDashboardStore from '../hooks/useDashboardStore'
 import { apiClient } from '../utils/api'
 
+type ChartMetric = 'power' | 'energy' | 'battery'
+type ChartStyle = 'line' | 'bar'
+type TimeRange = 6 | 12 | 24
+
+interface MetricConfig {
+  label: string
+  title: string
+  unit: string
+  color: string
+}
+
+const METRIC_CONFIG: Record<ChartMetric, MetricConfig> = {
+  power: { label: 'Power', title: 'Power Output', unit: 'W', color: '#3b82f6' },
+  energy: { label: 'Energy', title: 'Energy Production', unit: 'kWh', color: '#10b981' },
+  battery: { label: 'Battery', title: 'Battery Level', unit: '%', color: '#f59e0b' },
+}
+
 export const DashboardPage = () => {
+  const { user } = useAuthStore()
   const store = useDashboardStore()
+
   const [isPaired, setIsPaired] = useState(false)
   const [pairingCode, setPairingCode] = useState('150N6E')
   const [isPairing, setIsPairing] = useState(false)
+
   const [historyData, setHistoryData] = useState<Array<{ time: string; power: number; energy: number; battery: number }>>([])
+  const [selectedMetric, setSelectedMetric] = useState<ChartMetric>('battery')
+  const [chartStyle, setChartStyle] = useState<ChartStyle>('line')
+  const [timeRange, setTimeRange] = useState<TimeRange>(6)
 
   useEffect(() => {
     const loadPairingCode = async () => {
@@ -27,9 +50,7 @@ export const DashboardPage = () => {
     const loadPairingStatus = async () => {
       try {
         const { data } = await apiClient.get('/agent/status')
-        if (data?.isPaired) {
-          setIsPaired(true)
-        }
+        setIsPaired(Boolean(data?.isPaired))
       } catch {
         setIsPaired(false)
       }
@@ -52,7 +73,7 @@ export const DashboardPage = () => {
 
     const loadHistory = async () => {
       try {
-        const { data } = await apiClient.get('/data/history?hours=6')
+        const { data } = await apiClient.get(`/data/history?hours=${timeRange}`)
         setHistoryData(Array.isArray(data) ? data : [])
       } catch {
         setHistoryData([])
@@ -62,50 +83,14 @@ export const DashboardPage = () => {
     loadHistory()
     const interval = setInterval(loadHistory, 10000)
     return () => clearInterval(interval)
-  }, [isPaired, store.isOnline])
+  }, [isPaired, store.isOnline, timeRange])
 
   const handlePair = () => {
     setIsPairing(true)
     apiClient
       .post('/agent/pair', { pairingCode })
-      .then(() => {
-        setIsPaired(true)
-      })
-      .finally(() => {
-        setIsPairing(false)
-      })
-  }
-
-  if (!isPaired) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100">
-        <Header />
-        <div className="max-w-2xl mx-auto px-4 pt-10">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Setup Solar Portal</h1>
-            <p className="text-slate-400">Propojte Home Assistant a spusťte živý monitoring.</p>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
-            <p className="text-sm text-slate-400 mb-2">Párovací kód</p>
-            <p className="text-4xl tracking-widest font-bold text-cyan-300 mb-4">{pairingCode}</p>
-            <ol className="text-sm text-slate-300 space-y-2 mb-6">
-              <li>1. Otevřete Home Assistant → Integrations</li>
-              <li>2. Přidejte Solar Portal integraci</li>
-              <li>3. Zadejte párovací kód</li>
-              <li>4. Potvrďte propojení</li>
-            </ol>
-            <button
-              onClick={handlePair}
-              disabled={isPairing}
-              className="w-full py-3 rounded-lg bg-cyan-500 text-slate-950 font-semibold hover:bg-cyan-400 disabled:opacity-60"
-            >
-              {isPairing ? 'Připojuji…' : 'Mám vložený kód v Home Assistant'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
+      .then(() => setIsPaired(true))
+      .finally(() => setIsPairing(false))
   }
 
   const liveData = store.currentData || {
@@ -114,7 +99,7 @@ export const DashboardPage = () => {
     battery: 0,
     temperature: 0,
     efficiency: 0,
-    voltage: 0
+    voltage: 0,
   }
 
   const data = store.isOnline
@@ -128,49 +113,150 @@ export const DashboardPage = () => {
         voltage: 0,
       }
 
-  const lineData = historyData
-  const barData = historyData.slice(-12)
+  const selectedMetricConfig = useMemo(() => METRIC_CONFIG[selectedMetric], [selectedMetric])
+
+  if (!isPaired) {
+    return (
+      <div className="min-h-screen bg-slate-50 pt-10">
+        <div className="mx-auto max-w-2xl px-4">
+          <div className="mb-8 text-center">
+            <h1 className="mb-2 text-3xl font-bold text-gray-900">Setup Solar Portal</h1>
+            <p className="text-gray-600">Propojte Home Assistant a spusťte živý monitoring.</p>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <p className="mb-2 text-sm text-gray-500">Párovací kód</p>
+            <p className="mb-4 text-4xl font-bold tracking-widest text-blue-600">{pairingCode}</p>
+            <ol className="mb-6 space-y-2 text-sm text-gray-700">
+              <li>1. Otevřete Home Assistant → Integrations</li>
+              <li>2. Přidejte Solar Portal integraci</li>
+              <li>3. Zadejte párovací kód</li>
+              <li>4. Potvrďte propojení</li>
+            </ol>
+            <button
+              onClick={handlePair}
+              disabled={isPairing}
+              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              {isPairing ? 'Připojuji…' : 'Mám vložený kód v Home Assistant'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <Header />
-      <div className="max-w-7xl mx-auto px-4 pb-12 pt-8">
-        <div className="mb-8 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50 py-8">
+      <div className="mx-auto max-w-7xl px-4">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">Vítej v Solar Portalu</h1>
-            <p className="text-slate-400">Přehled výkonu vaší solární instalace.</p>
+            <h1 className="text-3xl font-bold text-gray-900">Welcome, {user?.fullName || 'User'}</h1>
+            <p className="text-gray-600">Přehled výkonu vaší solární instalace.</p>
           </div>
-          <div className={`px-4 py-2 rounded-full text-sm font-medium ${store.isOnline ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/15 text-red-300 border border-red-500/30'}`}>
+          <div
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
+              store.isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`}
+          >
+            <span className={`h-2.5 w-2.5 rounded-full ${store.isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
             {store.isOnline ? 'Online' : 'Offline'}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <MetricCard title="Current Power" value={Math.round(data.power)} unit="W" icon="⚡" color="yellow" />
           <MetricCard title="Energy Today" value={Number(data.energy).toFixed(1)} unit="kWh" icon="📈" color="green" />
           <MetricCard title="Battery Level" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" />
           <MetricCard title="Temperature" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Chart title="Power / Energy / Battery (last 6h)" data={lineData} type="line" />
-          <Chart title="Recent Intervals" data={barData} type="bar" />
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">Chart Settings</h2>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">Metrika</p>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(METRIC_CONFIG) as ChartMetric[]).map((metric) => (
+                  <button
+                    key={metric}
+                    onClick={() => setSelectedMetric(metric)}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      selectedMetric === metric
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {METRIC_CONFIG[metric].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">Typ grafu</p>
+              <div className="flex gap-2">
+                {(['line', 'bar'] as ChartStyle[]).map((style) => (
+                  <button
+                    key={style}
+                    onClick={() => setChartStyle(style)}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium uppercase transition ${
+                      chartStyle === style
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {style}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">Časové okno</p>
+              <div className="flex gap-2">
+                {[6, 12, 24].map((hours) => (
+                  <button
+                    key={hours}
+                    onClick={() => setTimeRange(hours as TimeRange)}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      timeRange === hours
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {hours}h
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">System Health</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
-              <p className="text-slate-400">Inverter Status</p>
-              <p className="font-semibold text-white mt-1">{store.isOnline ? 'Online' : 'Offline'}</p>
+        <Chart
+          title={`${selectedMetricConfig.title} (last ${timeRange}h)`}
+          data={historyData}
+          type={chartStyle}
+          dataKey={selectedMetric}
+          color={selectedMetricConfig.color}
+          unit={selectedMetricConfig.unit}
+          height={380}
+        />
+
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">System Health</h2>
+          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+            <div className="rounded-lg bg-gray-50 p-4">
+              <p className="text-gray-500">Inverter Status</p>
+              <p className="mt-1 font-semibold text-gray-900">{store.isOnline ? 'Online' : 'Offline'}</p>
             </div>
-            <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
-              <p className="text-slate-400">Efficiency</p>
-              <p className="font-semibold text-white mt-1">{Number(data.efficiency).toFixed(1)}%</p>
+            <div className="rounded-lg bg-gray-50 p-4">
+              <p className="text-gray-500">Efficiency</p>
+              <p className="mt-1 font-semibold text-gray-900">{Number(data.efficiency).toFixed(1)}%</p>
             </div>
-            <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
-              <p className="text-slate-400">Voltage</p>
-              <p className="font-semibold text-white mt-1">{Math.round(data.voltage)}V</p>
+            <div className="rounded-lg bg-gray-50 p-4">
+              <p className="text-gray-500">Voltage</p>
+              <p className="mt-1 font-semibold text-gray-900">{Math.round(data.voltage)}V</p>
             </div>
           </div>
         </div>
