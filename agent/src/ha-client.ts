@@ -33,12 +33,26 @@ export class HAClient {
     })
   }
 
+  private formatAxiosError(error: unknown): string {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status ?? 'unknown'
+      const statusText = error.response?.statusText ?? 'Unknown error'
+      return `status=${status}, message=${statusText}`
+    }
+
+    if (error instanceof Error) {
+      return error.message
+    }
+
+    return 'Unknown error'
+  }
+
   async getState(entityId: string): Promise<HAEntityState | null> {
     try {
       const response = await this.client.get<HAEntityState>(`/api/states/${entityId}`)
       return response.data
     } catch (error) {
-      logger.error(`Failed to get state for entity ${entityId}:`, error)
+      logger.error(`Failed to get state for entity ${entityId}: ${this.formatAxiosError(error)}`)
       return null
     }
   }
@@ -52,7 +66,7 @@ export class HAClient {
       })
       return states
     } catch (error) {
-      logger.error('Failed to get all states:', error)
+      logger.error(`Failed to get all states: ${this.formatAxiosError(error)}`)
       return null
     }
   }
@@ -62,7 +76,7 @@ export class HAClient {
       const response = await this.client.get('/api/')
       return response.status === 200
     } catch (error) {
-      logger.error('Failed to connect to Home Assistant:', error)
+      logger.error(`Failed to connect to Home Assistant: ${this.formatAxiosError(error)}`)
       return false
     }
   }
@@ -72,7 +86,7 @@ export class HAClient {
       await this.client.post(`/api/services/${domain}/${service}`, data || {})
       return true
     } catch (error) {
-      logger.error(`Failed to call service ${domain}.${service}:`, error)
+      logger.error(`Failed to call service ${domain}.${service}: ${this.formatAxiosError(error)}`)
       return false
     }
   }
