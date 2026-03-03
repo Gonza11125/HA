@@ -4,9 +4,7 @@ import { useAuthStore } from '../hooks/useAuthStore'
 import { apiClient } from '../utils/api'
 
 export const LoginPage = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [installationPassword, setInstallationPassword] = useState('')
+  const [accessCode, setAccessCode] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [canRegister, setCanRegister] = useState(false)
   const [error, setError] = useState('')
@@ -36,9 +34,7 @@ export const LoginPage = () => {
 
     try {
       const { data } = await apiClient.post('/auth/login', {
-        email,
-        password,
-        installationPassword,
+        accessCode,
         rememberMe
       })
 
@@ -64,7 +60,7 @@ export const LoginPage = () => {
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-4xl shadow-lg">☀️</div>
           <h1 className="text-3xl font-bold text-gray-900">Solar Portal</h1>
-          <p className="mt-2 text-gray-600">Přihlaste se k vaší solární instalaci</p>
+          <p className="mt-2 text-gray-600">Přihlášení pomocí přístupového kódu</p>
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
@@ -78,54 +74,22 @@ export const LoginPage = () => {
             )}
 
           <div>
-            <label htmlFor="installationPassword" className="block text-sm font-medium text-gray-700 mb-2">
-              Instalační heslo *
+            <label htmlFor="accessCode" className="mb-2 block text-sm font-medium text-gray-700">
+              Přístupový kód *
             </label>
             <input
-              id="installationPassword"
+              id="accessCode"
               type="text"
-              value={installationPassword}
-              onChange={(e) => setInstallationPassword(e.target.value)}
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-mono text-sm"
-              placeholder="Vložte instalační heslo"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 font-mono text-sm uppercase outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+              placeholder="Např. AB12CD34"
               disabled={isLoading}
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Instalační heslo bylo zobrazeno při první registraci
+            <p className="mt-1 text-xs text-gray-500">
+              Kód byl vygenerován při první registraci a používá se stále stejný.
             </p>
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              E-mailová adresa
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-              placeholder="vas@email.cz"
-              disabled={isLoading}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Heslo k účtu
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-              placeholder="••••••••"
-              disabled={isLoading}
-            />
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer">
@@ -141,21 +105,25 @@ export const LoginPage = () => {
 
             <button
               type="submit"
-              disabled={isLoading || !installationPassword}
+              disabled={isLoading || !accessCode}
               className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
             >
               {isLoading ? 'Přihlašování...' : 'Přihlásit se'}
             </button>
           </form>
 
-          {canRegister && (
+          {canRegister ? (
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Nemáte účet?{' '}
+                Kód ještě není vygenerovaný?{' '}
                 <Link to="/register" className="font-medium text-blue-600 hover:text-blue-700">
-                  Zaregistrujte se
+                  Vygenerovat kód
                 </Link>
               </p>
+            </div>
+          ) : (
+            <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              Přístupový kód je aktivní. Přihlaste se kódem výše.
             </div>
           )}
         </div>
