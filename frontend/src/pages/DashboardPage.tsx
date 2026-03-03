@@ -1,20 +1,39 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '../hooks/useAuthStore'
 import { MetricCard } from '../components/MetricCard'
 import { Chart } from '../components/Chart'
 import useDashboardStore from '../hooks/useDashboardStore'
 import { apiClient } from '../utils/api'
 
-type ChartTab = 'power' | 'energy' | 'battery' | 'all'
+type ChartMetric = 'power' | 'energy' | 'battery'
+type ChartStyle = 'line' | 'bar'
+type TimeRange = 6 | 12 | 24
+
+interface MetricConfig {
+  label: string
+  title: string
+  unit: string
+  color: string
+}
+
+const METRIC_CONFIG: Record<ChartMetric, MetricConfig> = {
+  power: { label: 'Power', title: 'Power Output', unit: 'W', color: '#3b82f6' },
+  energy: { label: 'Energy', title: 'Energy Production', unit: 'kWh', color: '#10b981' },
+  battery: { label: 'Battery', title: 'Battery Level', unit: '%', color: '#f59e0b' },
+}
 
 export const DashboardPage = () => {
   const { user } = useAuthStore()
   const store = useDashboardStore()
+
   const [isPaired, setIsPaired] = useState(false)
   const [pairingCode, setPairingCode] = useState('150N6E')
   const [isPairing, setIsPairing] = useState(false)
+
   const [historyData, setHistoryData] = useState<Array<{ time: string; power: number; energy: number; battery: number }>>([])
-  const [activeTab, setActiveTab] = useState<ChartTab>('power')
+  const [selectedMetric, setSelectedMetric] = useState<ChartMetric>('battery')
+  const [chartStyle, setChartStyle] = useState<ChartStyle>('line')
+  const [timeRange, setTimeRange] = useState<TimeRange>(6)
 
   useEffect(() => {
     const loadPairingCode = async () => {
@@ -31,9 +50,7 @@ export const DashboardPage = () => {
     const loadPairingStatus = async () => {
       try {
         const { data } = await apiClient.get('/agent/status')
-        if (data?.isPaired) {
-          setIsPaired(true)
-        }
+        setIsPaired(Boolean(data?.isPaired))
       } catch {
         setIsPaired(false)
       }
@@ -56,7 +73,7 @@ export const DashboardPage = () => {
 
     const loadHistory = async () => {
       try {
-        const { data } = await apiClient.get('/data/history?hours=6')
+        const { data } = await apiClient.get(`/data/history?hours=${timeRange}`)
         setHistoryData(Array.isArray(data) ? data : [])
       } catch {
         setHistoryData([])
@@ -66,66 +83,14 @@ export const DashboardPage = () => {
     loadHistory()
     const interval = setInterval(loadHistory, 10000)
     return () => clearInterval(interval)
-  }, [isPaired, store.isOnline])
+  }, [isPaired, store.isOnline, timeRange])
 
   const handlePair = () => {
     setIsPairing(true)
     apiClient
       .post('/agent/pair', { pairingCode })
-      .then(() => {
-        setIsPaired(true)
-      })
-      .finally(() => {
-        setIsPairing(false)
-      })
-  }
-
-  if (!isPaired) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pt-10">
-        <div className="max-w-2xl mx-auto px-4">
-          <div className="text-center mb-8">
-            <div className="text-6xl mb-4">🔗</div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">Setup Solar Portal</h1>
-            <p className="text-gray-600 text-lg">Propojte Home Assistant a spusťte živý monitoring</p>
-          </div>
-
-          <div className="bg-white border-2 border-blue-200 rounded-2xl shadow-lg p-8 mb-6">
-            <p className="text-sm text-gray-500 font-medium mb-3 uppercase tracking-wide">Párovací kód</p>
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-1 rounded-xl mb-6">
-              <div className="bg-white rounded-lg p-4">
-                <p className="text-5xl tracking-[0.3em] font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 text-center">{pairingCode}</p>
-              </div>
-            </div>
-            <ol className="text-sm text-gray-700 space-y-3 mb-8 bg-gray-50 p-4 rounded-xl">
-              <li className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                <span>Otevřete Home Assistant → Integrations</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                <span>Přidejte Solar Portal integraci</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                <span>Zadejte párovací kód</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">4</span>
-                <span>Potvrďte propojení</span>
-              </li>
-            </ol>
-            <button
-              onClick={handlePair}
-              disabled={isPairing}
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-60 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-            >
-              {isPairing ? '🔄 Připojuji…' : '✓ Mám vložený kód v Home Assistant'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
+      .then(() => setIsPaired(true))
+      .finally(() => setIsPairing(false))
   }
 
   const liveData = store.currentData || {
@@ -134,7 +99,7 @@ export const DashboardPage = () => {
     battery: 0,
     temperature: 0,
     efficiency: 0,
-    voltage: 0
+    voltage: 0,
   }
 
   const data = store.isOnline
@@ -148,150 +113,150 @@ export const DashboardPage = () => {
         voltage: 0,
       }
 
-  const lineData = historyData
-  const barData = historyData.slice(-12)
+  const selectedMetricConfig = useMemo(() => METRIC_CONFIG[selectedMetric], [selectedMetric])
+
+  if (!isPaired) {
+    return (
+      <div className="min-h-screen bg-slate-50 pt-10">
+        <div className="mx-auto max-w-2xl px-4">
+          <div className="mb-8 text-center">
+            <h1 className="mb-2 text-3xl font-bold text-gray-900">Setup Solar Portal</h1>
+            <p className="text-gray-600">Propojte Home Assistant a spusťte živý monitoring.</p>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+            <p className="mb-2 text-sm text-gray-500">Párovací kód</p>
+            <p className="mb-4 text-4xl font-bold tracking-widest text-blue-600">{pairingCode}</p>
+            <ol className="mb-6 space-y-2 text-sm text-gray-700">
+              <li>1. Otevřete Home Assistant → Integrations</li>
+              <li>2. Přidejte Solar Portal integraci</li>
+              <li>3. Zadejte párovací kód</li>
+              <li>4. Potvrďte propojení</li>
+            </ol>
+            <button
+              onClick={handlePair}
+              disabled={isPairing}
+              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              {isPairing ? 'Připojuji…' : 'Mám vložený kód v Home Assistant'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-8">
-      <div className="max-w-7xl mx-auto px-4 pb-12">
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="min-h-screen bg-slate-50 py-8">
+      <div className="mx-auto max-w-7xl px-4">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome, {user?.fullName || 'User'}</h1>
-            <p className="text-gray-600 text-lg">Přehled výkonu vaší solární instalace v reálném čase</p>
+            <h1 className="text-3xl font-bold text-gray-900">Welcome, {user?.fullName || 'User'}</h1>
+            <p className="text-gray-600">Přehled výkonu vaší solární instalace.</p>
           </div>
-          <div className={`px-5 py-2.5 rounded-full text-sm font-semibold shadow-sm inline-flex items-center gap-2 ${
-            store.isOnline 
-              ? 'bg-green-100 text-green-700 border-2 border-green-300' 
-              : 'bg-red-100 text-red-700 border-2 border-red-300'
-          }`}>
-            <span className={`w-2.5 h-2.5 rounded-full ${store.isOnline ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></span>
+          <div
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
+              store.isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`}
+          >
+            <span className={`h-2.5 w-2.5 rounded-full ${store.isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
             {store.isOnline ? 'Online' : 'Offline'}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <MetricCard title="Current Power" value={Math.round(data.power)} unit="W" icon="⚡" color="yellow" />
           <MetricCard title="Energy Today" value={Number(data.energy).toFixed(1)} unit="kWh" icon="📈" color="green" />
           <MetricCard title="Battery Level" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" />
           <MetricCard title="Temperature" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" />
         </div>
 
-        {/* Chart Tabs */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-8 overflow-hidden">
-          <div className="flex border-b border-gray-200 bg-gray-50">
-            <button
-              onClick={() => setActiveTab('power')}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-                activeTab === 'power'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              ⚡ Power
-            </button>
-            <button
-              onClick={() => setActiveTab('energy')}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-                activeTab === 'energy'
-                  ? 'text-green-600 border-b-2 border-green-600 bg-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              📈 Energy
-            </button>
-            <button
-              onClick={() => setActiveTab('battery')}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-                activeTab === 'battery'
-                  ? 'text-orange-600 border-b-2 border-orange-600 bg-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              🔋 Battery
-            </button>
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
-                activeTab === 'all'
-                  ? 'text-purple-600 border-b-2 border-purple-600 bg-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              📊 All Metrics
-            </button>
-          </div>
-
-          <div className="p-6">
-            {activeTab === 'power' && (
-              <Chart 
-                title="Power Output" 
-                data={lineData} 
-                type="line" 
-                dataKey="power"
-                color="#eab308"
-                unit="W"
-              />
-            )}
-            {activeTab === 'energy' && (
-              <Chart 
-                title="Energy Production" 
-                data={lineData} 
-                type="line" 
-                dataKey="energy"
-                color="#10b981"
-                unit="kWh"
-              />
-            )}
-            {activeTab === 'battery' && (
-              <Chart 
-                title="Battery Level" 
-                data={lineData} 
-                type="line" 
-                dataKey="battery"
-                color="#f59e0b"
-                unit="%"
-              />
-            )}
-            {activeTab === 'all' && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Chart 
-                  title="Power" 
-                  data={lineData} 
-                  type="bar" 
-                  dataKey="power"
-                  color="#eab308"
-                  unit="W"
-                />
-                <Chart 
-                  title="Energy" 
-                  data={lineData} 
-                  type="bar" 
-                  dataKey="energy"
-                  color="#10b981"
-                  unit="kWh"
-                />
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">Chart Settings</h2>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">Metrika</p>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(METRIC_CONFIG) as ChartMetric[]).map((metric) => (
+                  <button
+                    key={metric}
+                    onClick={() => setSelectedMetric(metric)}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      selectedMetric === metric
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {METRIC_CONFIG[metric].label}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">Typ grafu</p>
+              <div className="flex gap-2">
+                {(['line', 'bar'] as ChartStyle[]).map((style) => (
+                  <button
+                    key={style}
+                    onClick={() => setChartStyle(style)}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium uppercase transition ${
+                      chartStyle === style
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {style}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">Časové okno</p>
+              <div className="flex gap-2">
+                {[6, 12, 24].map((hours) => (
+                  <button
+                    key={hours}
+                    onClick={() => setTimeRange(hours as TimeRange)}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                      timeRange === hours
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {hours}h
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">System Health</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-              <p className="text-gray-600 font-medium mb-2">Inverter Status</p>
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${store.isOnline ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></span>
-                <p className="font-bold text-gray-900 text-lg">{store.isOnline ? 'Online' : 'Offline'}</p>
-              </div>
+        <Chart
+          title={`${selectedMetricConfig.title} (last ${timeRange}h)`}
+          data={historyData}
+          type={chartStyle}
+          dataKey={selectedMetric}
+          color={selectedMetricConfig.color}
+          unit={selectedMetricConfig.unit}
+          height={380}
+        />
+
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">System Health</h2>
+          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+            <div className="rounded-lg bg-gray-50 p-4">
+              <p className="text-gray-500">Inverter Status</p>
+              <p className="mt-1 font-semibold text-gray-900">{store.isOnline ? 'Online' : 'Offline'}</p>
             </div>
-            <div className="p-5 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
-              <p className="text-gray-600 font-medium mb-2">Efficiency</p>
-              <p className="font-bold text-gray-900 text-2xl">{Number(data.efficiency).toFixed(1)}%</p>
+            <div className="rounded-lg bg-gray-50 p-4">
+              <p className="text-gray-500">Efficiency</p>
+              <p className="mt-1 font-semibold text-gray-900">{Number(data.efficiency).toFixed(1)}%</p>
             </div>
-            <div className="p-5 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl border border-indigo-200">
-              <p className="text-gray-600 font-medium mb-2">Voltage</p>
-              <p className="font-bold text-gray-900 text-2xl">{Math.round(data.voltage)}V</p>
+            <div className="rounded-lg bg-gray-50 p-4">
+              <p className="text-gray-500">Voltage</p>
+              <p className="mt-1 font-semibold text-gray-900">{Math.round(data.voltage)}V</p>
             </div>
           </div>
         </div>

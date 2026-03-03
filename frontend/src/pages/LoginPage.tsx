@@ -59,24 +59,23 @@ export const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">☀️ Solar Portál</h1>
-          <p className="text-gray-600">Monitorování vaší solární instalace</p>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-md space-y-8">
+        <div className="text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 text-4xl shadow-lg">☀️</div>
+          <h1 className="text-3xl font-bold text-gray-900">Solar Portal</h1>
+          <p className="mt-2 text-gray-600">Přihlaste se k vaší solární instalaci</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
-              {attemptsRemaining !== null && (
-                <p className="text-xs mt-1">
-                  Zbývá pokusů: {attemptsRemaining}
-                </p>
-              )}
-            </div>
-          )}
+        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+                {attemptsRemaining !== null && <p className="mt-1 text-xs">Zbývá pokusů: {attemptsRemaining}</p>}
+              </div>
+            )}
 
           <div>
             <label htmlFor="installationPassword" className="block text-sm font-medium text-gray-700 mb-2">
@@ -140,22 +139,25 @@ export const LoginPage = () => {
             <span className="text-sm text-gray-700">Zůstat přihlášen (24 hodin)</span>
           </label>
 
-          <button
-            type="submit"
-            disabled={isLoading || !installationPassword}
-            className="w-full bg-indigo-600 text-white font-medium py-2 rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
-          >
-            {isLoading ? 'Přihlašování...' : 'Přihlášení'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={isLoading || !installationPassword}
+              className="w-full rounded-lg bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isLoading ? 'Přihlašování...' : 'Přihlásit se'}
+            </button>
+          </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600 text-sm">
-            Nemáte účet?{' '}
-            <Link to="/register" className="text-indigo-600 hover:text-indigo-700 font-medium">
-              Zaregistrujte se
-            </Link>
-          </p>
+          {canRegister && (
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Nemáte účet?{' '}
+                <Link to="/register" className="font-medium text-blue-600 hover:text-blue-700">
+                  Zaregistrujte se
+                </Link>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

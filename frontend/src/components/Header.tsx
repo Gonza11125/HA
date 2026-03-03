@@ -29,65 +29,62 @@ export const Header = () => {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
+      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/dashboard")}>
-          <div className="text-3xl"></div>
+        <div className="flex cursor-pointer items-center gap-3" onClick={() => navigate("/dashboard")}>
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-2xl">☀️</div>
           <div>
-            <h1 className="text-xl font-bold text-white">Solar Portal</h1>
-            <p className="text-xs text-slate-400">Home Assistant Integration</p>
+            <h1 className="text-xl font-bold text-gray-900">Solar Portal</h1>
+            <p className="text-xs text-gray-500">Home Assistant Integration</p>
           </div>
         </div>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden items-center gap-2 md:flex">
           <button
             onClick={() => navigate("/dashboard")}
-            className="text-slate-300 hover:text-white font-medium transition flex items-center gap-2"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
           >
-            Dashboard
+            📊 Dashboard
           </button>
           <button
             onClick={() => navigate("/profile")}
-            className="text-slate-300 hover:text-white font-medium transition"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
           >
-            Profile
+            👤 Profile
           </button>
           {user?.role === "admin" && (
             <button
               onClick={() => navigate("/admin")}
-              className="text-slate-300 hover:text-white font-medium transition"
+              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
             >
-              Admin
+              ⚙️ Admin
             </button>
           )}
         </div>
 
         {/* Right Side - Status & User */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           {/* Online Status Indicator */}
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${isOnline ? "bg-emerald-500/10 border border-emerald-500/30" : "bg-red-500/10 border border-red-500/30"}`}>
-            {isOnline ? (
-              <>
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                <span className="text-emerald-400 text-sm font-medium hidden sm:inline">Online</span>
-              </>
-            ) : (
-              <>
-                <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                <span className="text-red-400 text-sm font-medium hidden sm:inline">Offline</span>
-              </>
-            )}
+          <div
+            className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+              isOnline
+                ? "bg-green-50 text-green-700 border border-green-200"
+                : "bg-red-50 text-red-700 border border-red-200"
+            }`}
+          >
+            <div className={`h-2 w-2 rounded-full ${isOnline ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+            <span className="hidden sm:inline">{isOnline ? "Online" : "Offline"}</span>
           </div>
 
           {/* User Info */}
-          <div className="hidden sm:flex items-center gap-4 border-l border-slate-700 pl-6">
-            <div className="text-sm text-right">
-              <p className="font-medium text-white">{user?.fullName || "User"}</p>
-              <p className="text-slate-400 text-xs capitalize">{user?.role || "customer"}</p>
+          <div className="hidden items-center gap-3 border-l border-gray-200 pl-4 sm:flex">
+            <div className="text-right text-sm">
+              <p className="font-medium text-gray-900">{user?.fullName || "User"}</p>
+              <p className="text-xs capitalize text-gray-500">{user?.role || "customer"}</p>
             </div>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-sm font-bold text-white">
               {user?.fullName?.charAt(0) || "U"}
             </div>
           </div>
@@ -95,7 +92,7 @@ export const Header = () => {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="px-4 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-400 font-medium transition border border-red-500/30"
+            className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
           >
             Logout
           </button>

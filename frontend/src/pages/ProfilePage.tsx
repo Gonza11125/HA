@@ -28,11 +28,15 @@ export const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">My Profile</h1>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
+          <p className="mt-1 text-gray-600">Manage your account settings and preferences</p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Profile Info */}
@@ -112,12 +116,12 @@ export const ProfilePage = () => {
                   </>
                 )}
 
-                <div className="flex gap-4">
+                <div className="flex gap-3">
                   {!isEditing ? (
                     <button
                       type="button"
                       onClick={() => setIsEditing(true)}
-                      className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                      className="rounded-lg bg-blue-600 px-6 py-2.5 font-medium text-white transition hover:bg-blue-700"
                     >
                       Edit Profile
                     </button>
@@ -125,14 +129,14 @@ export const ProfilePage = () => {
                     <>
                       <button
                         type="submit"
-                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                        className="rounded-lg bg-green-600 px-6 py-2.5 font-medium text-white transition hover:bg-green-700"
                       >
                         Save Changes
                       </button>
                       <button
                         type="button"
                         onClick={() => setIsEditing(false)}
-                        className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
+                        className="rounded-lg bg-gray-100 px-6 py-2.5 font-medium text-gray-700 transition hover:bg-gray-200"
                       >
                         Cancel
                       </button>
