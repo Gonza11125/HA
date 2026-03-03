@@ -7,7 +7,7 @@ import { apiClient } from '../utils/api'
 
 type ChartMetric = 'power' | 'energy' | 'battery'
 type ChartStyle = 'line' | 'bar'
-type TimeRange = 6 | 12 | 24
+type TimeRange = 0.5 | 5 | 24 | 168
 
 interface MetricConfig {
   label: string
@@ -22,6 +22,13 @@ const METRIC_CONFIG: Record<ChartMetric, MetricConfig> = {
   battery: { label: 'Battery', title: 'Battery Level', unit: '%', color: '#f59e0b' },
 }
 
+const TIME_RANGE_OPTIONS: Array<{ value: TimeRange; label: string }> = [
+  { value: 0.5, label: '30 min' },
+  { value: 5, label: '5 h' },
+  { value: 24, label: '24 h' },
+  { value: 168, label: '1 týden' },
+]
+
 export const DashboardPage = () => {
   const { user } = useAuthStore()
   const store = useDashboardStore()
@@ -33,7 +40,7 @@ export const DashboardPage = () => {
   const [historyData, setHistoryData] = useState<Array<{ time: string; power: number; energy: number; battery: number }>>([])
   const [selectedMetric, setSelectedMetric] = useState<ChartMetric>('battery')
   const [chartStyle, setChartStyle] = useState<ChartStyle>('line')
-  const [timeRange, setTimeRange] = useState<TimeRange>(6)
+  const [timeRange, setTimeRange] = useState<TimeRange>(24)
 
   useEffect(() => {
     const loadPairingCode = async () => {
@@ -114,6 +121,10 @@ export const DashboardPage = () => {
       }
 
   const selectedMetricConfig = useMemo(() => METRIC_CONFIG[selectedMetric], [selectedMetric])
+  const selectedTimeRangeLabel = useMemo(
+    () => TIME_RANGE_OPTIONS.find((option) => option.value === timeRange)?.label ?? '24 h',
+    [timeRange],
+  )
 
   if (!isPaired) {
     return (
@@ -215,17 +226,17 @@ export const DashboardPage = () => {
             <div>
               <p className="mb-2 text-sm font-medium text-gray-600">Časové okno</p>
               <div className="flex gap-2">
-                {[6, 12, 24].map((hours) => (
+                {TIME_RANGE_OPTIONS.map((option) => (
                   <button
-                    key={hours}
-                    onClick={() => setTimeRange(hours as TimeRange)}
+                    key={option.label}
+                    onClick={() => setTimeRange(option.value)}
                     className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      timeRange === hours
+                      timeRange === option.value
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {hours}h
+                    {option.label}
                   </button>
                 ))}
               </div>
@@ -234,7 +245,7 @@ export const DashboardPage = () => {
         </div>
 
         <Chart
-          title={`${selectedMetricConfig.title} (last ${timeRange}h)`}
+          title={`${selectedMetricConfig.title} (posledních ${selectedTimeRangeLabel})`}
           data={historyData}
           type={chartStyle}
           dataKey={selectedMetric}

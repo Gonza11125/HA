@@ -17,7 +17,8 @@ router.get('/current', async (req: Request, res: Response) => {
 // GET /api/data/history - Get historical data (mock)
 router.get('/history', async (req: Request, res: Response) => {
   try {
-    const hours = parseInt(req.query.hours as string) || 24;
+    const parsed = Number.parseFloat(req.query.hours as string);
+    const hours = Number.isFinite(parsed) && parsed > 0 ? parsed : 24;
     return res.json(getHistory(hours));
   } catch (error) {
     logger.error('Failed to get history data:', error);
