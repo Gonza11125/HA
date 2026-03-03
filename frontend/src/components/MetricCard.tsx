@@ -30,7 +30,7 @@ export const MetricCard = ({
   }
 
   return (
-    <div className={`${colorClasses[color]} border rounded-lg p-6`}>
+    <div className={`${colorClasses[color]} border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow`}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-gray-600 text-sm font-medium">{title}</p>
