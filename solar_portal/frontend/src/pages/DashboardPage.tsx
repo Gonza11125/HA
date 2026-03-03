@@ -1,12 +1,11 @@
 ﻿import { useState, useEffect } from 'react'
-import { useAuthStore } from '../hooks/useAuthStore'
 import { MetricCard } from '../components/MetricCard'
 import { Chart } from '../components/Chart'
+import Header from '../components/Header'
 import useDashboardStore from '../hooks/useDashboardStore'
 import { apiClient } from '../utils/api'
 
 export const DashboardPage = () => {
-  const { user } = useAuthStore()
   const store = useDashboardStore()
   const [isPaired, setIsPaired] = useState(false)
   const [pairingCode, setPairingCode] = useState('150N6E')
@@ -79,17 +78,18 @@ export const DashboardPage = () => {
 
   if (!isPaired) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-10">
-        <div className="max-w-2xl mx-auto px-4">
+      <div className="min-h-screen bg-slate-950 text-slate-100">
+        <Header />
+        <div className="max-w-2xl mx-auto px-4 pt-10">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Setup Solar Portal</h1>
-            <p className="text-gray-600">Propojte Home Assistant a spusťte živý monitoring.</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Setup Solar Portal</h1>
+            <p className="text-slate-400">Propojte Home Assistant a spusťte živý monitoring.</p>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-            <p className="text-sm text-gray-500 mb-2">Párovací kód</p>
-            <p className="text-4xl tracking-widest font-bold text-blue-600 mb-4">{pairingCode}</p>
-            <ol className="text-sm text-gray-700 space-y-2 mb-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
+            <p className="text-sm text-slate-400 mb-2">Párovací kód</p>
+            <p className="text-4xl tracking-widest font-bold text-cyan-300 mb-4">{pairingCode}</p>
+            <ol className="text-sm text-slate-300 space-y-2 mb-6">
               <li>1. Otevřete Home Assistant → Integrations</li>
               <li>2. Přidejte Solar Portal integraci</li>
               <li>3. Zadejte párovací kód</li>
@@ -98,7 +98,7 @@ export const DashboardPage = () => {
             <button
               onClick={handlePair}
               disabled={isPairing}
-              className="w-full py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60"
+              className="w-full py-3 rounded-lg bg-cyan-500 text-slate-950 font-semibold hover:bg-cyan-400 disabled:opacity-60"
             >
               {isPairing ? 'Připojuji…' : 'Mám vložený kód v Home Assistant'}
             </button>
@@ -132,14 +132,15 @@ export const DashboardPage = () => {
   const barData = historyData.slice(-12)
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-8">
-      <div className="max-w-7xl mx-auto px-4 pb-12">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <Header />
+      <div className="max-w-7xl mx-auto px-4 pb-12 pt-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome, {user?.fullName || 'User'}</h1>
-            <p className="text-gray-600">Přehled výkonu vaší solární instalace.</p>
+            <h1 className="text-3xl font-bold text-white">Vítej v Solar Portalu</h1>
+            <p className="text-slate-400">Přehled výkonu vaší solární instalace.</p>
           </div>
-          <div className={`px-4 py-2 rounded-full text-sm font-medium ${store.isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          <div className={`px-4 py-2 rounded-full text-sm font-medium ${store.isOnline ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/15 text-red-300 border border-red-500/30'}`}>
             {store.isOnline ? 'Online' : 'Offline'}
           </div>
         </div>
@@ -156,20 +157,20 @@ export const DashboardPage = () => {
           <Chart title="Recent Intervals" data={barData} type="bar" />
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">System Health</h2>
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <h2 className="text-xl font-semibold text-white mb-4">System Health</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">Inverter Status</p>
-              <p className="font-semibold text-gray-900 mt-1">{store.isOnline ? 'Online' : 'Offline'}</p>
+            <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
+              <p className="text-slate-400">Inverter Status</p>
+              <p className="font-semibold text-white mt-1">{store.isOnline ? 'Online' : 'Offline'}</p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">Efficiency</p>
-              <p className="font-semibold text-gray-900 mt-1">{Number(data.efficiency).toFixed(1)}%</p>
+            <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
+              <p className="text-slate-400">Efficiency</p>
+              <p className="font-semibold text-white mt-1">{Number(data.efficiency).toFixed(1)}%</p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">Voltage</p>
-              <p className="font-semibold text-gray-900 mt-1">{Math.round(data.voltage)}V</p>
+            <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
+              <p className="text-slate-400">Voltage</p>
+              <p className="font-semibold text-white mt-1">{Math.round(data.voltage)}V</p>
             </div>
           </div>
         </div>

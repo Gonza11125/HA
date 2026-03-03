@@ -19,22 +19,20 @@ export const apiClient = axios.create({
   }
 })
 
-// Add request interceptor for auth token
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
 // Add response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken')
-      window.location.href = '/login'
+    const status = error?.response?.status
+    const url = String(error?.config?.url || '')
+    const isAuthCall =
+      url.includes('/auth/login') ||
+      url.includes('/auth/register') ||
+      url.includes('/auth/registration-status') ||
+      url.includes('/auth/me')
+
+    if (status === 401 && !isAuthCall && window.location.pathname !== '/login') {
+      window.location.assign('/login')
     }
     return Promise.reject(error)
   }

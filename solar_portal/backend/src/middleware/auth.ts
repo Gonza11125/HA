@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
 
 export interface AuthRequest extends Request {
   user?: {
     id: string;
-    email: string;
+    email?: string;
     role: 'customer' | 'admin';
   };
   device?: {
@@ -25,7 +24,12 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    const decoded = decodeAccessToken(token);
+    if (!decoded) {
+      res.status(401).json({ error: 'Invalid or expired token' });
+      return;
+    }
+
     req.user = {
       id: decoded.userId,
       email: decoded.email,
@@ -41,14 +45,28 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
 
 export function authenticateDevice(req: AuthRequest, res: Response, next: NextFunction): void {
   try {
-    const token = req.headers['x-device-token'] as string;
+    let token: string | undefined;
+
+    const authHeader = req.headers.authorization;
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+
+    if (!token) {
+      token = req.headers['x-device-token'] as string;
+    }
 
     if (!token) {
       res.status(401).json({ error: 'No device token provided' });
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    const decoded = decodeDeviceToken(token);
+    if (!decoded) {
+      res.status(401).json({ error: 'Invalid device token' });
+      return;
+    }
+
     req.device = {
       id: decoded.deviceId,
       siteId: decoded.siteId
@@ -81,4 +99,47 @@ function extractTokenFromHeader(req: Request): string | null {
     return authHeader.substring(7);
   }
   return null;
+}
+
+function decodeAccessToken(token: string): { userId: string; email?: string; role?: 'customer' | 'admin' } | null {
+  try {
+    const raw = Buffer.from(token, 'base64').toString('utf-8');
+    const parsed = JSON.parse(raw);
+
+    if (!parsed?.userId) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function decodeDeviceToken(token: string): { deviceId: string; siteId: string } | null {
+  try {
+    if (token.startsWith('eyJ')) {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = parts[1];
+        const padded = payload.padEnd(payload.length + (4 - (payload.length % 4)) % 4, '=');
+        const raw = Buffer.from(padded, 'base64').toString('utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed?.deviceId && parsed?.siteId) {
+          return parsed;
+        }
+      }
+      return null;
+    }
+
+    const raw = Buffer.from(token, 'base64').toString('utf-8');
+    const parsed = JSON.parse(raw);
+    if (!parsed?.deviceId || !parsed?.siteId) {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
 }

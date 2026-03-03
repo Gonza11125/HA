@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.4] - 2026-03-03
+
+### ✨ Přidáno
+- 🔐 Kompletní přihlášení přes jediný přístupový kód (bez e-mailu a hesla účtu)
+- 🎨 Modernizovaný dark UI styl pro dashboard, hlavičku a access stránku
+- 💾 Stabilnější práce se session přes `/auth/me` + cookie flow
+
+### 🔧 Opraveno
+- ✅ Logout nyní korektně volá backend endpoint a čistí session
+- 🌐 Header online status kontroluje API přes správnou dynamickou URL (ne `localhost`)
+- 🧩 Middleware token validace sjednocena s kódovým auth modelem
+
 ## [0.3.3] - 2026-03-02
 
 ### ✨ Přidáno

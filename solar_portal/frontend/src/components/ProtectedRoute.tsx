@@ -7,7 +7,15 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
-  const { user } = useAuthStore()
+  const { user, isLoading, isInitialized } = useAuthStore()
+
+  if (!isInitialized || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100">
+        <div className="text-sm tracking-wide">Ověřuji přihlášení…</div>
+      </div>
+    )
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />
