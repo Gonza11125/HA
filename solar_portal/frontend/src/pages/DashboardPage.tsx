@@ -29,6 +29,27 @@ const TIME_RANGE_OPTIONS: Array<{ value: TimeRange; label: string }> = [
   { value: 168, label: '1 týden' },
 ]
 
+const formatTimeLabel = (timestamp?: string, range?: TimeRange, fallback?: string) => {
+  if (!timestamp) {
+    return fallback || ''
+  }
+
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) {
+    return fallback || ''
+  }
+
+  if (range === 0.5 || range === 5) {
+    return date.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  }
+
+  if (range === 24) {
+    return date.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  return date.toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
 export const DashboardPage = () => {
   const { user } = useAuthStore()
   const store = useDashboardStore()
@@ -37,7 +58,7 @@ export const DashboardPage = () => {
   const [pairingCode, setPairingCode] = useState('150N6E')
   const [isPairing, setIsPairing] = useState(false)
 
-  const [historyData, setHistoryData] = useState<Array<{ time: string; power: number; energy: number; battery: number }>>([])
+  const [historyData, setHistoryData] = useState<Array<{ time: string; timestamp?: string; power: number; energy: number; battery: number }>>([])
   const [selectedMetric, setSelectedMetric] = useState<ChartMetric>('battery')
   const [chartStyle, setChartStyle] = useState<ChartStyle>('line')
   const [timeRange, setTimeRange] = useState<TimeRange>(24)
@@ -124,6 +145,14 @@ export const DashboardPage = () => {
   const selectedTimeRangeLabel = useMemo(
     () => TIME_RANGE_OPTIONS.find((option) => option.value === timeRange)?.label ?? '24 h',
     [timeRange],
+  )
+  const chartData = useMemo(
+    () =>
+      historyData.map((point) => ({
+        ...point,
+        time: formatTimeLabel(point.timestamp, timeRange, point.time),
+      })),
+    [historyData, timeRange],
   )
 
   if (!isPaired) {
@@ -246,7 +275,7 @@ export const DashboardPage = () => {
 
         <Chart
           title={`${selectedMetricConfig.title} (posledních ${selectedTimeRangeLabel})`}
-          data={historyData}
+          data={chartData}
           type={chartStyle}
           dataKey={selectedMetric}
           color={selectedMetricConfig.color}
