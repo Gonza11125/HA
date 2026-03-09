@@ -1,3 +1,6 @@
+# Home Assistant base image argument
+ARG BUILD_FROM
+
 # Build stage - Frontend
 FROM node:18-alpine AS frontend-builder
 WORKDIR /build
@@ -23,7 +26,6 @@ COPY agent/ ./
 RUN npm run build
 
 # Final stage - Use Home Assistant base image
-ARG BUILD_FROM
 FROM $BUILD_FROM
 
 # Install additional tools and PostgreSQL
