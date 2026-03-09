@@ -2,7 +2,7 @@
 FROM node:18-alpine AS frontend-builder
 WORKDIR /build
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts || npm install
 COPY frontend/ ./
 RUN npm run build
 
@@ -10,7 +10,7 @@ RUN npm run build
 FROM node:18-alpine AS backend-builder
 WORKDIR /build
 COPY backend/package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts || npm install
 COPY backend/ ./
 RUN npm run build
 
@@ -18,12 +18,13 @@ RUN npm run build
 FROM node:18-alpine AS agent-builder
 WORKDIR /build
 COPY agent/package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts || npm install
 COPY agent/ ./
 RUN npm run build
 
-# Final stage - Use clean Alpine (no s6-overlay conflicts)
-FROM node:18-alpine
+# Final stage - Use Home Assistant base image
+ARG BUILD_FROM
+FROM $BUILD_FROM
 
 # Install additional tools and PostgreSQL
 RUN apk add --no-cache \
@@ -51,7 +52,6 @@ WORKDIR /app/agent
 COPY --from=agent-builder /build/dist ./dist
 COPY --from=agent-builder /build/node_modules ./node_modules
 COPY --from=agent-builder /build/package.json ./
-COPY agent/config.json ./
 
 # Copy startup script
 COPY run.sh /
