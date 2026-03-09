@@ -16,13 +16,16 @@ interface ChartData {
   power: number
   energy?: number
   battery?: number
+  gridImport?: number
+  solarProduction?: number
+  selfConsumptionPercent?: number
 }
 
 interface ChartProps {
   title: string
   data: ChartData[]
   type?: 'line' | 'bar'
-  dataKey?: 'power' | 'energy' | 'battery'
+  dataKey?: 'power' | 'energy' | 'battery' | 'gridImport' | 'solarProduction' | 'selfConsumptionPercent'
   color?: string
   unit?: string
   height?: number

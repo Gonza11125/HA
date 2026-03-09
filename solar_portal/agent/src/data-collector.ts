@@ -72,6 +72,26 @@ export class DataCollector {
   private mapSensorToType(sensorId: string): string {
     const id = sensorId.toLowerCase()
 
+    // Grid import (nakoupená energie)
+    if ((id.includes('grid') || id.includes('elektromer') || id.includes('elektroměr')) && 
+        (id.includes('import') || id.includes('nakoupena') || id.includes('nakoupená'))) {
+      return 'grid_import'
+    }
+    
+    // Grid export (vyexportovaná energie)
+    if ((id.includes('grid') || id.includes('elektromer') || id.includes('elektroměr')) && 
+        (id.includes('export') || id.includes('prodej'))) {
+      return 'grid_export'
+    }
+    
+    // Solar production (vyrobená energie ze střidače)
+    if ((id.includes('solar') || id.includes('pv') || id.includes('inverter') || 
+         id.includes('stridac') || id.includes('střídač')) && 
+        (id.includes('production') || id.includes('vyroba') || id.includes('výroba') || 
+         id.includes('energy') || id.includes('energie'))) {
+      return 'solar_production'
+    }
+
     if (id.includes('battery') && (id.includes('soc') || id.includes('level'))) {
       return 'battery_soc'
     }

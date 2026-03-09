@@ -13,7 +13,7 @@ export interface DiscoveredSensor {
   friendlyName: string
   state: string
   unit: string
-  category: 'power' | 'energy' | 'battery' | 'voltage' | 'current' | 'temperature' | 'other'
+  category: 'power' | 'energy' | 'battery' | 'voltage' | 'current' | 'temperature' | 'grid_import' | 'grid_export' | 'solar_production' | 'other'
   relevanceScore: number
 }
 
@@ -24,6 +24,9 @@ export interface DiscoveryResult {
   voltage: DiscoveredSensor[]
   current: DiscoveredSensor[]
   temperature: DiscoveredSensor[]
+  grid_import: DiscoveredSensor[]
+  grid_export: DiscoveredSensor[]
+  solar_production: DiscoveredSensor[]
   other: DiscoveredSensor[]
 }
 
@@ -39,6 +42,10 @@ const KEYWORDS = {
   temperature: ['temperature', 'temp', 'teplota'],
   inverter: ['inverter', 'měnič', 'menic', 'střídač', 'stridac'],
   solar: ['solar', 'pv', 'photovoltaic', 'panel', 'solární', 'solarni'],
+  grid: ['grid', 'sít', 'sit', 'elektroměr', 'elektromer', 'mains'],
+  import: ['import', 'import_total', 'imported', 'bought', 'purchase', 'nakoupená', 'nakoupena'],
+  export: ['export', 'export_total', 'exported', 'sold', 'feed', 'prodej'],
+  production: ['production', 'produced', 'výroba', 'vyroba', 'generated'],
 }
 
 /**
@@ -70,6 +77,26 @@ function calculateRelevance(entityId: string, friendlyName: string): number {
  */
 function categorizeSensor(entityId: string, friendlyName: string, unit: string): DiscoveredSensor['category'] {
   const searchText = `${entityId} ${friendlyName} ${unit}`.toLowerCase()
+
+  // Grid import sensors (nakoupená energie z elektroměru)
+  if (KEYWORDS.grid.some(kw => searchText.includes(kw)) && 
+      KEYWORDS.import.some(kw => searchText.includes(kw))) {
+    return 'grid_import'
+  }
+
+  // Grid export sensors (vyrobená a prodaná energie)
+  if (KEYWORDS.grid.some(kw => searchText.includes(kw)) && 
+      KEYWORDS.export.some(kw => searchText.includes(kw))) {
+    return 'grid_export'
+  }
+
+  // Solar production sensors (vyrobená energie ze střidače/FVE)
+  if ((KEYWORDS.solar.some(kw => searchText.includes(kw)) || 
+       KEYWORDS.inverter.some(kw => searchText.includes(kw))) &&
+      (KEYWORDS.production.some(kw => searchText.includes(kw)) || 
+       KEYWORDS.energy.some(kw => searchText.includes(kw)))) {
+    return 'solar_production'
+  }
 
   // Power sensors
   if (KEYWORDS.power.some(kw => searchText.includes(kw)) || unit.toLowerCase().includes('w')) {
@@ -132,6 +159,9 @@ export async function discoverSensors(haUrl: string, haToken: string): Promise<D
       voltage: [],
       current: [],
       temperature: [],
+      grid_import: [],
+      grid_export: [],
+      solar_production: [],
       other: [],
     }
 

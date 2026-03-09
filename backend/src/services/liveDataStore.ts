@@ -9,6 +9,9 @@ interface LiveData {
   current: number
   efficiency: number
   temperature: number
+  gridImport: number // Nakoupená energie z elektroměru kotelny (kWh)
+  solarProduction: number // Vyrobená energie ze střidače (kWh)
+  selfConsumptionPercent: number // Procento využití energie z FVE
 }
 
 interface HistoryPoint {
@@ -17,6 +20,9 @@ interface HistoryPoint {
   energy: number
   battery: number
   timestamp: string
+  gridImport: number
+  solarProduction: number
+  selfConsumptionPercent: number
 }
 
 interface AgentPushPayload {
@@ -37,9 +43,13 @@ let liveData: LiveData = {
   current: 0,
   efficiency: 0,
   temperature: 0,
+  gridImport: 0,
+  solarProduction: 0,
+  selfConsumptionPercent: 0,
 }
 
-const MAX_HISTORY_POINTS = 288
+// Uložit až 7 dní historie (5 min interval = 12 bodů/hodinu * 24 hodin * 7 dní = 2016 bodů)
+const MAX_HISTORY_POINTS = 2016
 
 function toNumber(value: unknown, fallback: number): number {
   const parsed = Number(value)
@@ -57,6 +67,33 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
   const current = toNumber(metrics.current ?? metrics.battery_current, liveData.current)
   const temperature = toNumber(metrics.temperature ?? metrics.inverter_temperature, liveData.temperature)
   const efficiency = toNumber(metrics.efficiency, liveData.efficiency)
+  
+  // Nové metriky
+  const gridImport = toNumber(metrics.grid_import ?? metrics.grid_energy_import ?? metrics.energy_import, liveData.gridImport)
+  const solarProduction = toNumber(metrics.solar_production ?? metrics.solar_energy ?? metrics.pv_energy, liveData.solarProduction)
+  
+  // Výpočet procenta využití: kolik % vyrobené energie bylo spotřebováno (nevyexportováno)
+  // Využitá energie = vyrobená - exportovaná = vyrobená - (vyrobená - importovaná + spotřeba baterie)
+  // Zjednodušeně: selfConsumption = (solarProduction - gridExport) / solarProduction * 100
+  // Pokud není export dostupný, aproximujeme: selfConsumption ≈ (solarProduction - gridImport) / solarProduction * 100
+  let selfConsumptionPercent = liveData.selfConsumptionPercent
+  if (solarProduction > 0) {
+    const gridExport = toNumber(metrics.grid_export ?? metrics.grid_energy_export ?? metrics.energy_export, 0)
+    if (gridExport > 0) {
+      // Máme export, použijeme přesný výpočet
+      selfConsumptionPercent = Math.max(0, Math.min(100, ((solarProduction - gridExport) / solarProduction) * 100))
+    } else {
+      // Nemáme export, aproximujeme podle importu
+      // Pokud importujeme energie, znamená to, že spotřeba > výroba, takže využití = 100%
+      // Pokud neimportujeme, část exportujeme
+      if (gridImport > 0) {
+        selfConsumptionPercent = 100
+      } else {
+        // Odhadneme podle poměru výroby a aktuálního výkonu
+        selfConsumptionPercent = power > 0 ? Math.min(100, (power / solarProduction) * 100) : liveData.selfConsumptionPercent
+      }
+    }
+  }
 
   liveData = {
     timestamp: nowIso,
@@ -69,6 +106,9 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
     current,
     efficiency,
     temperature,
+    gridImport,
+    solarProduction,
+    selfConsumptionPercent,
   }
 
   history.push({
@@ -77,6 +117,9 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
     energy,
     battery,
     timestamp: nowIso,
+    gridImport,
+    solarProduction,
+    selfConsumptionPercent,
   })
 
   if (history.length > MAX_HISTORY_POINTS) {

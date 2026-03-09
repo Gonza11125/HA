@@ -5,9 +5,9 @@ import { Chart } from '../components/Chart'
 import useDashboardStore from '../hooks/useDashboardStore'
 import { apiClient } from '../utils/api'
 
-type ChartMetric = 'power' | 'energy' | 'battery'
+type ChartMetric = 'power' | 'energy' | 'battery' | 'gridImport' | 'solarProduction' | 'selfConsumptionPercent'
 type ChartStyle = 'line' | 'bar'
-type TimeRange = 0.5 | 5 | 24 | 168
+type TimeRange = 0.5 | 5 | 24 | 168 | 720
 
 interface MetricConfig {
   label: string
@@ -20,13 +20,17 @@ const METRIC_CONFIG: Record<ChartMetric, MetricConfig> = {
   power: { label: 'Power', title: 'Power Output', unit: 'W', color: '#3b82f6' },
   energy: { label: 'Energy', title: 'Energy Production', unit: 'kWh', color: '#10b981' },
   battery: { label: 'Battery', title: 'Battery Level', unit: '%', color: '#f59e0b' },
+  gridImport: { label: 'Grid Import', title: 'Nakoupená energie', unit: 'kWh', color: '#ef4444' },
+  solarProduction: { label: 'Solar', title: 'Vyrobená energie', unit: 'kWh', color: '#22c55e' },
+  selfConsumptionPercent: { label: 'Self Use', title: 'Využití FVE', unit: '%', color: '#8b5cf6' },
 }
 
 const TIME_RANGE_OPTIONS: Array<{ value: TimeRange; label: string }> = [
   { value: 0.5, label: '30 min' },
   { value: 5, label: '5 h' },
   { value: 24, label: '24 h' },
-  { value: 168, label: '1 týden' },
+  { value: 168, label: '7 dní' },
+  { value: 720, label: '30 dní' },
 ]
 
 const formatTimeLabel = (timestamp?: string, range?: TimeRange, fallback?: string) => {
@@ -47,7 +51,12 @@ const formatTimeLabel = (timestamp?: string, range?: TimeRange, fallback?: strin
     return date.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
   }
 
-  return date.toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  if (range === 168) {
+    return date.toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  }
+
+  // Pro 30 dní zobrazíme datum bez času
+  return date.toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' })
 }
 
 export const DashboardPage = () => {
@@ -58,7 +67,16 @@ export const DashboardPage = () => {
   const [pairingCode, setPairingCode] = useState('150N6E')
   const [isPairing, setIsPairing] = useState(false)
 
-  const [historyData, setHistoryData] = useState<Array<{ time: string; timestamp?: string; power: number; energy: number; battery: number }>>([])
+  const [historyData, setHistoryData] = useState<Array<{ 
+    time: string
+    timestamp?: string
+    power: number
+    energy: number
+    battery: number
+    gridImport: number
+    solarProduction: number
+    selfConsumptionPercent: number
+  }>>([])
   const [selectedMetric, setSelectedMetric] = useState<ChartMetric>('battery')
   const [chartStyle, setChartStyle] = useState<ChartStyle>('line')
   const [timeRange, setTimeRange] = useState<TimeRange>(24)
@@ -128,6 +146,9 @@ export const DashboardPage = () => {
     temperature: 0,
     efficiency: 0,
     voltage: 0,
+    gridImport: 0,
+    solarProduction: 0,
+    selfConsumptionPercent: 0,
   }
 
   const data = store.isOnline
@@ -139,6 +160,9 @@ export const DashboardPage = () => {
         temperature: 0,
         efficiency: 0,
         voltage: 0,
+        gridImport: 0,
+        solarProduction: 0,
+        selfConsumptionPercent: 0,
       }
 
   const selectedMetricConfig = useMemo(() => METRIC_CONFIG[selectedMetric], [selectedMetric])
@@ -204,10 +228,31 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <MetricCard title="Current Power" value={Math.round(data.power)} unit="W" icon="⚡" color="yellow" />
           <MetricCard title="Energy Today" value={Number(data.energy).toFixed(1)} unit="kWh" icon="📈" color="green" />
           <MetricCard title="Battery Level" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" />
+          <MetricCard 
+            title="Vyrobená energie" 
+            value={Number(data.solarProduction).toFixed(2)} 
+            unit="kWh" 
+            icon="☀️" 
+            color="green" 
+          />
+          <MetricCard 
+            title="Nakoupená energie" 
+            value={Number(data.gridImport).toFixed(2)} 
+            unit="kWh" 
+            icon="🏭" 
+            color="red" 
+          />
+          <MetricCard 
+            title="Využití FVE" 
+            value={Math.round(data.selfConsumptionPercent)} 
+            unit="%" 
+            icon="♻️" 
+            color="purple" 
+          />
           <MetricCard title="Temperature" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" />
         </div>
 
