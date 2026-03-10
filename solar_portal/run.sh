@@ -45,7 +45,10 @@ const defaults = {
     entity_power_now: 'sensor.solax_inverter_output_power',
     entity_energy_today: 'sensor.solax_inverter_energy_today',
     entity_battery_soc: 'sensor.solax_inverter_battery_capacity',
-    entity_battery_voltage: 'sensor.solax_inverter_battery_voltage_charge'
+    entity_battery_voltage: 'sensor.solax_inverter_battery_voltage_charge',
+    entity_grid_import: '',
+    entity_grid_export: '',
+    entity_solar_production: ''
 }
 
 let options = {}
@@ -81,6 +84,21 @@ const entityMappings = [
 const batteryVoltage = String(options.entity_battery_voltage || defaults.entity_battery_voltage).trim()
 if (batteryVoltage) {
     entityMappings.push({ type: 'battery_voltage', entityId: batteryVoltage, friendlyName: 'Battery Voltage', unit: 'V' })
+}
+
+const gridImport = String(options.entity_grid_import || defaults.entity_grid_import).trim()
+if (gridImport) {
+    entityMappings.push({ type: 'grid_import', entityId: gridImport, friendlyName: 'Grid Import', unit: 'kWh' })
+}
+
+const gridExport = String(options.entity_grid_export || defaults.entity_grid_export).trim()
+if (gridExport) {
+    entityMappings.push({ type: 'grid_export', entityId: gridExport, friendlyName: 'Grid Export', unit: 'kWh' })
+}
+
+const solarProduction = String(options.entity_solar_production || defaults.entity_solar_production).trim()
+if (solarProduction) {
+    entityMappings.push({ type: 'solar_production', entityId: solarProduction, friendlyName: 'Solar Production', unit: 'kWh' })
 }
 
 const config = {

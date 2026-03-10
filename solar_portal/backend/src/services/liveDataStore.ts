@@ -48,8 +48,7 @@ let liveData: LiveData = {
   selfConsumptionPercent: 0,
 }
 
-// Uložit až 7 dní historie (5 min interval = 12 bodů/hodinu * 24 hodin * 7 dní = 2016 bodů)
-const MAX_HISTORY_POINTS = 2016
+const HISTORY_RETENTION_HOURS = 24 * 30
 
 function toNumber(value: unknown, fallback: number): number {
   const parsed = Number(value)
@@ -114,8 +113,9 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
     selfConsumptionPercent,
   })
 
-  if (history.length > MAX_HISTORY_POINTS) {
-    history.splice(0, history.length - MAX_HISTORY_POINTS)
+  const retentionCutoff = Date.now() - HISTORY_RETENTION_HOURS * 60 * 60 * 1000
+  while (history.length > 0 && new Date(history[0].timestamp).getTime() < retentionCutoff) {
+    history.shift()
   }
 }
 
@@ -128,8 +128,8 @@ export function getHistory(hours = 24): HistoryPoint[] {
     return []
   }
 
-  const maxPoints = Math.max(1, Math.floor((hours * 60) / 5))
-  return history.slice(-maxPoints)
+  const cutoff = Date.now() - hours * 60 * 60 * 1000
+  return history.filter((point) => new Date(point.timestamp).getTime() >= cutoff)
 }
 
 export function getConnectionStatus() {

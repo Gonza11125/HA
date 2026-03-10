@@ -26,7 +26,10 @@
     "entity_power_now": "sensor.solax_inverter_output_power",
     "entity_energy_today": "sensor.solax_inverter_energy_today",
     "entity_battery_soc": "sensor.solax_inverter_battery_capacity",
-    "entity_battery_voltage": "sensor.solax_inverter_battery_voltage_charge"
+    "entity_battery_voltage": "sensor.solax_inverter_battery_voltage_charge",
+    "entity_grid_import": "",
+    "entity_grid_export": "",
+    "entity_solar_production": ""
   },
   "schema": {
     "log_level": "list(trace|debug|info|notice|warning|error|fatal)?",
@@ -40,7 +43,10 @@
     "entity_power_now": "str",
     "entity_energy_today": "str",
     "entity_battery_soc": "str",
-    "entity_battery_voltage": "str?"
+    "entity_battery_voltage": "str?",
+    "entity_grid_import": "str?",
+    "entity_grid_export": "str?",
+    "entity_solar_production": "str?"
   },
   "environment": {
     "NODE_ENV": "production"
