@@ -251,7 +251,7 @@ export const DashboardPage = () => {
             value={Math.round(data.selfConsumptionPercent)} 
             unit="%" 
             icon="♻️" 
-            color="purple" 
+            color="blue" 
           />
           <MetricCard title="Temperature" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" />
         </div>

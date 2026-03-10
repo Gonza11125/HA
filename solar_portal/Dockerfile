@@ -1,5 +1,5 @@
 # Home Assistant base image argument
-ARG BUILD_FROM
+ARG BUILD_FROM=node:18-alpine
 
 # Build stage - Frontend
 FROM node:18-alpine AS frontend-builder
