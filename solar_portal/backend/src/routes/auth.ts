@@ -220,7 +220,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const user: SessionUser = {
       userId: 'local-installation-user',
-      fullName: 'Installation',
+      fullName: 'Instalace',
       role: 'customer',
       iat: Math.floor(Date.now() / 1000)
     };

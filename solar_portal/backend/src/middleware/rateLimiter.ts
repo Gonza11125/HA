@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 export const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 500, // limit each IP to 500 requests per windowMs (increased for normal usage)
-  message: 'Too many requests from this IP, please try again later.',
+  message: 'Příliš mnoho požadavků z této IP adresy. Zkuste to prosím později.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skip: (req: Request) => {
@@ -16,7 +16,7 @@ export const rateLimiter = rateLimit({
   handler: (req: Request, res: Response) => {
     logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
     res.status(429).json({
-      error: 'Too many requests, please try again later'
+      error: 'Příliš mnoho požadavků, zkuste to prosím později'
     });
   }
 });
@@ -25,14 +25,14 @@ export const rateLimiter = rateLimit({
 export const authRateLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS || '900000'), // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_AUTH_MAX_REQUESTS || '200'), // 200 attempts (enough for normal usage)
-  message: 'Too many login attempts, please try again later.',
+  message: 'Příliš mnoho pokusů o přihlášení. Zkuste to prosím později.',
   standardHeaders: false,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful requests
   handler: (req: Request, res: Response) => {
     logger.warn(`Auth rate limit exceeded for IP: ${req.ip}`);
     res.status(429).json({
-      error: 'Too many login attempts, please try again later'
+      error: 'Příliš mnoho pokusů o přihlášení, zkuste to prosím později'
     });
   }
 });
@@ -46,7 +46,7 @@ export const apiRateLimiter = rateLimit({
   handler: (req: Request, res: Response) => {
     logger.warn(`API rate limit exceeded for IP: ${req.ip}`);
     res.status(429).json({
-      error: 'API rate limit exceeded'
+      error: 'Byl překročen limit API požadavků'
     });
   }
 });

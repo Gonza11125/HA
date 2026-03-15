@@ -26,12 +26,12 @@ router.post('/pair', async (req: Request, res: Response) => {
     const { pairingCode } = req.body;
 
     if (!pairingCode) {
-      return res.status(400).json({ error: 'Pairing code required' });
+      return res.status(400).json({ error: 'Párovací kód je povinný' });
     }
 
     const expectedPairingCode = getPairingCode();
     if (String(pairingCode).trim().toUpperCase() !== expectedPairingCode) {
-      return res.status(400).json({ error: 'Invalid pairing code' });
+      return res.status(400).json({ error: 'Neplatný párovací kód' });
     }
 
     const deviceId = uuidv4();
@@ -65,7 +65,7 @@ router.post('/pair', async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('Device pairing error:', error);
-    return res.status(500).json({ error: 'Pairing failed' });
+    return res.status(500).json({ error: 'Párování selhalo' });
   }
 });
 
@@ -83,7 +83,7 @@ router.get('/status', async (req: Request, res: Response) => {
     return res.json(mockStatus);
   } catch (error) {
     logger.error('Get device status error:', error);
-    return res.status(500).json({ error: 'Failed to get device status' });
+    return res.status(500).json({ error: 'Nepodařilo se získat stav zařízení' });
   }
 });
 
@@ -97,10 +97,10 @@ router.post('/unpair', async (req: Request, res: Response) => {
       logger.info(`Device unpaired: ${deviceId}`);
     }
 
-    return res.json({ message: 'Device unpaired successfully' });
+    return res.json({ message: 'Zařízení bylo úspěšně odpárováno' });
   } catch (error) {
     logger.error('Device unpairing error:', error);
-    return res.status(500).json({ error: 'Failed to unpair device' });
+    return res.status(500).json({ error: 'Nepodařilo se odpárovat zařízení' });
   }
 });
 
@@ -110,7 +110,7 @@ router.post('/push', authenticateDevice, async (req: Request, res: Response) => 
     const { timestamp, metrics, health } = req.body;
 
     if (!timestamp || !metrics) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Chybí povinná pole' });
     }
 
     const deviceRequest = req as Request & { device?: { id: string } };
@@ -124,10 +124,10 @@ router.post('/push', authenticateDevice, async (req: Request, res: Response) => 
 
     logger.info('Data received from agent:', { timestamp, metrics });
     updateLiveDataFromAgent({ timestamp, metrics });
-    return res.json({ message: 'Data received successfully' });
+    return res.json({ message: 'Data byla úspěšně přijata' });
   } catch (error) {
     logger.error('Agent push error:', error);
-    return res.status(500).json({ error: 'Failed to process data' });
+    return res.status(500).json({ error: 'Zpracování dat selhalo' });
   }
 });
 
@@ -148,7 +148,7 @@ router.get('/config', async (req: Request, res: Response) => {
     return res.json({ config });
   } catch (error) {
     logger.error('Get config error:', error);
-    return res.status(500).json({ error: 'Failed to get config' });
+    return res.status(500).json({ error: 'Nepodařilo se načíst konfiguraci' });
   }
 });
 
@@ -162,7 +162,7 @@ router.post('/ping', async (req: Request, res: Response) => {
     });
   } catch (error) {
     logger.error('Ping error:', error);
-    return res.status(500).json({ error: 'Ping failed' });
+    return res.status(500).json({ error: 'Ping selhal' });
   }
 });
 

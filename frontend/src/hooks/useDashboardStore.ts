@@ -47,7 +47,7 @@ export const useDashboardStore = () => {
         setStore(prev => ({
           ...prev,
           isOnline: false,
-          error: 'Failed to connect to server'
+          error: 'Nepodařilo se připojit k serveru'
         }))
       }
     }
@@ -71,7 +71,7 @@ export const useDashboardStore = () => {
       } catch (error) {
         setStore(prev => ({
           ...prev,
-          error: 'Lost connection to server'
+          error: 'Spojení se serverem bylo ztraceno'
         }))
       }
     }, 5000)

@@ -12,10 +12,10 @@ router.use(requireAdmin);
 router.get('/dashboard', async (req: Request, res: Response) => {
   try {
     logger.info('Admin dashboard endpoint hit');
-    res.json({ message: 'Admin dashboard route - Implementation in progress' });
+    res.json({ message: 'Administrátorský dashboard - implementace probíhá' });
   } catch (error) {
     logger.error('Admin dashboard error:', error);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Operace selhala' });
   }
 });
 
@@ -23,10 +23,10 @@ router.get('/dashboard', async (req: Request, res: Response) => {
 router.get('/users', async (req: Request, res: Response) => {
   try {
     logger.info('List users endpoint hit');
-    res.json({ message: 'List users route - Implementation in progress' });
+    res.json({ message: 'Seznam uživatelů - implementace probíhá' });
   } catch (error) {
     logger.error('List users error:', error);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Operace selhala' });
   }
 });
 
@@ -34,10 +34,10 @@ router.get('/users', async (req: Request, res: Response) => {
 router.get('/sites', async (req: Request, res: Response) => {
   try {
     logger.info('List sites endpoint hit');
-    res.json({ message: 'List sites route - Implementation in progress' });
+    res.json({ message: 'Seznam lokalit - implementace probíhá' });
   } catch (error) {
     logger.error('List sites error:', error);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Operace selhala' });
   }
 });
 
@@ -46,10 +46,10 @@ router.post('/sites/:id/pairing-code', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     logger.info('Generate pairing code endpoint hit', { siteId: id });
-    res.json({ message: 'Generate pairing code route - Implementation in progress' });
+    res.json({ message: 'Generování párovacího kódu - implementace probíhá' });
   } catch (error) {
     logger.error('Generate pairing code error:', error);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Operace selhala' });
   }
 });
 
@@ -58,10 +58,10 @@ router.post('/sites/:id/reset-pairing', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     logger.info('Reset pairing endpoint hit', { siteId: id });
-    res.json({ message: 'Reset pairing route - Implementation in progress' });
+    res.json({ message: 'Reset párování - implementace probíhá' });
   } catch (error) {
     logger.error('Reset pairing error:', error);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Operace selhala' });
   }
 });
 
@@ -70,10 +70,10 @@ router.get('/audit-logs', async (req: Request, res: Response) => {
   try {
     const { limit, offset } = req.query;
     logger.info('Get audit logs endpoint hit', { limit, offset });
-    res.json({ message: 'Get audit logs route - Implementation in progress' });
+    res.json({ message: 'Auditní logy - implementace probíhá' });
   } catch (error) {
     logger.error('Get audit logs error:', error);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Operace selhala' });
   }
 });
 

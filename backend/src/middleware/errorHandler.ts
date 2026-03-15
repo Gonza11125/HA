@@ -13,7 +13,7 @@ export function errorHandler(
   _next: NextFunction
 ): void {
   const statusCode = error.statusCode || 500;
-  const message = error.message || 'Internal Server Error';
+  const message = error.message || 'Interní chyba serveru';
 
   logger.error(`[${statusCode}] ${message}`, {
     error: error.stack,
@@ -42,7 +42,7 @@ export class ValidationError extends Error implements AppError {
 export class NotFoundError extends Error implements AppError {
   statusCode = 404;
 
-  constructor(message: string = 'Not Found') {
+  constructor(message: string = 'Nenalezeno') {
     super(message);
     this.name = 'NotFoundError';
   }
@@ -51,7 +51,7 @@ export class NotFoundError extends Error implements AppError {
 export class UnauthorizedError extends Error implements AppError {
   statusCode = 401;
 
-  constructor(message: string = 'Unauthorized') {
+  constructor(message: string = 'Neautorizováno') {
     super(message);
     this.name = 'UnauthorizedError';
   }
@@ -60,7 +60,7 @@ export class UnauthorizedError extends Error implements AppError {
 export class ForbiddenError extends Error implements AppError {
   statusCode = 403;
 
-  constructor(message: string = 'Forbidden') {
+  constructor(message: string = 'Zakázáno') {
     super(message);
     this.name = 'ForbiddenError';
   }

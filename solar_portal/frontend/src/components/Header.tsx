@@ -36,7 +36,7 @@ export const Header = () => {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-2xl">☀️</div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">Solar Portal</h1>
-            <p className="text-xs text-gray-500">Home Assistant Integration</p>
+            <p className="text-xs text-gray-500">Integrace s Home Assistant</p>
           </div>
         </div>
 
@@ -46,20 +46,20 @@ export const Header = () => {
             onClick={() => navigate("/dashboard")}
             className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
           >
-            📊 Dashboard
+            📊 Přehled
           </button>
           <button
             onClick={() => navigate("/profile")}
             className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
           >
-            👤 Profile
+            👤 Profil
           </button>
           {user?.role === "admin" && (
             <button
               onClick={() => navigate("/admin")}
               className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
             >
-              ⚙️ Admin
+              ⚙️ Administrace
             </button>
           )}
         </div>
@@ -81,8 +81,8 @@ export const Header = () => {
           {/* User Info */}
           <div className="hidden items-center gap-3 border-l border-gray-200 pl-4 sm:flex">
             <div className="text-right text-sm">
-              <p className="font-medium text-gray-900">{user?.fullName || "User"}</p>
-              <p className="text-xs capitalize text-gray-500">{user?.role || "customer"}</p>
+              <p className="font-medium text-gray-900">{user?.fullName || "Uživatel"}</p>
+              <p className="text-xs capitalize text-gray-500">{user?.role === "admin" ? "administrátor" : "zákazník"}</p>
             </div>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-sm font-bold text-white">
               {user?.fullName?.charAt(0) || "U"}
@@ -94,7 +94,7 @@ export const Header = () => {
             onClick={handleLogout}
             className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
           >
-            Logout
+            Odhlásit
           </button>
         </div>
       </nav>

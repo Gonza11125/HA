@@ -10,7 +10,7 @@ router.get('/current', async (req: Request, res: Response) => {
     return res.json(getLiveData());
   } catch (error) {
     logger.error('Failed to get current data:', error);
-    return res.status(500).json({ error: 'Failed to fetch current data' });
+    return res.status(500).json({ error: 'Nepodařilo se načíst aktuální data' });
   }
 });
 
@@ -22,7 +22,7 @@ router.get('/history', async (req: Request, res: Response) => {
     return res.json(getHistory(hours));
   } catch (error) {
     logger.error('Failed to get history data:', error);
-    return res.status(500).json({ error: 'Failed to fetch historical data' });
+    return res.status(500).json({ error: 'Nepodařilo se načíst historická data' });
   }
 });
 
@@ -32,7 +32,7 @@ router.get('/status', async (req: Request, res: Response) => {
     return res.json(getConnectionStatus());
   } catch (error) {
     logger.error('Failed to get status:', error);
-    return res.status(500).json({ error: 'Failed to fetch status' });
+    return res.status(500).json({ error: 'Nepodařilo se načíst stav' });
   }
 });
 

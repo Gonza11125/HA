@@ -20,13 +20,13 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
     const token = req.cookies.accessToken || extractTokenFromHeader(req);
 
     if (!token) {
-      res.status(401).json({ error: 'No authentication token provided' });
+      res.status(401).json({ error: 'Chybí autentizační token' });
       return;
     }
 
     const decoded = decodeAccessToken(token);
     if (!decoded) {
-      res.status(401).json({ error: 'Invalid or expired token' });
+      res.status(401).json({ error: 'Token je neplatný nebo vypršel' });
       return;
     }
 
@@ -39,7 +39,7 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
     next();
   } catch (error) {
     logger.warn('Authentication failed:', error);
-    res.status(401).json({ error: 'Invalid or expired token' });
+    res.status(401).json({ error: 'Token je neplatný nebo vypršel' });
   }
 }
 
@@ -57,13 +57,13 @@ export function authenticateDevice(req: AuthRequest, res: Response, next: NextFu
     }
 
     if (!token) {
-      res.status(401).json({ error: 'No device token provided' });
+      res.status(401).json({ error: 'Chybí token zařízení' });
       return;
     }
 
     const decoded = decodeDeviceToken(token);
     if (!decoded) {
-      res.status(401).json({ error: 'Invalid device token' });
+      res.status(401).json({ error: 'Neplatný token zařízení' });
       return;
     }
 
@@ -75,18 +75,18 @@ export function authenticateDevice(req: AuthRequest, res: Response, next: NextFu
     next();
   } catch (error) {
     logger.warn('Device authentication failed:', error);
-    res.status(401).json({ error: 'Invalid device token' });
+    res.status(401).json({ error: 'Neplatný token zařízení' });
   }
 }
 
 export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction): void {
   if (!req.user) {
-    res.status(401).json({ error: 'Not authenticated' });
+    res.status(401).json({ error: 'Nejste přihlášen' });
     return;
   }
 
   if (req.user.role !== 'admin') {
-    res.status(403).json({ error: 'Admin access required' });
+    res.status(403).json({ error: 'Vyžadován přístup administrátora' });
     return;
   }
 

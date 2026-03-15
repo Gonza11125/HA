@@ -17,12 +17,12 @@ interface MetricConfig {
 }
 
 const METRIC_CONFIG: Record<ChartMetric, MetricConfig> = {
-  power: { label: 'Power', title: 'Power Output', unit: 'W', color: '#3b82f6' },
-  energy: { label: 'Energy', title: 'Energy Production', unit: 'kWh', color: '#10b981' },
-  battery: { label: 'Battery', title: 'Battery Level', unit: '%', color: '#f59e0b' },
-  gridImport: { label: 'Grid Import', title: 'Nakoupená energie', unit: 'kWh', color: '#ef4444' },
-  solarProduction: { label: 'Solar', title: 'Vyrobená energie', unit: 'kWh', color: '#22c55e' },
-  selfConsumptionPercent: { label: 'Self Use', title: 'Využití FVE', unit: '%', color: '#8b5cf6' },
+  power: { label: 'Výkon', title: 'Aktuální výkon', unit: 'W', color: '#3b82f6' },
+  energy: { label: 'Energie', title: 'Vyrobená energie', unit: 'kWh', color: '#10b981' },
+  battery: { label: 'Baterie', title: 'Stav baterie', unit: '%', color: '#f59e0b' },
+  gridImport: { label: 'Odběr ze sítě', title: 'Nakoupená energie', unit: 'kWh', color: '#ef4444' },
+  solarProduction: { label: 'FVE', title: 'Vyrobená energie', unit: 'kWh', color: '#22c55e' },
+  selfConsumptionPercent: { label: 'Vlastní spotřeba', title: 'Využití FVE', unit: '%', color: '#8b5cf6' },
 }
 
 const TIME_RANGE_OPTIONS: Array<{ value: TimeRange; label: string }> = [
@@ -184,7 +184,7 @@ export const DashboardPage = () => {
       <div className="min-h-screen bg-slate-50 pt-10">
         <div className="mx-auto max-w-2xl px-4">
           <div className="mb-8 text-center">
-            <h1 className="mb-2 text-3xl font-bold text-gray-900">Setup Solar Portal</h1>
+            <h1 className="mb-2 text-3xl font-bold text-gray-900">Nastavení Solar Portalu</h1>
             <p className="text-gray-600">Propojte Home Assistant a spusťte živý monitoring.</p>
           </div>
 
@@ -192,8 +192,8 @@ export const DashboardPage = () => {
             <p className="mb-2 text-sm text-gray-500">Párovací kód</p>
             <p className="mb-4 text-4xl font-bold tracking-widest text-blue-600">{pairingCode}</p>
             <ol className="mb-6 space-y-2 text-sm text-gray-700">
-              <li>1. Otevřete Home Assistant → Integrations</li>
-              <li>2. Přidejte Solar Portal integraci</li>
+              <li>1. Otevřete Home Assistant → Integrace</li>
+              <li>2. Přidejte integraci Solar Portal</li>
               <li>3. Zadejte párovací kód</li>
               <li>4. Potvrďte propojení</li>
             </ol>
@@ -215,7 +215,7 @@ export const DashboardPage = () => {
       <div className="mx-auto max-w-7xl px-4">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome, {user?.fullName || 'User'}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Vítejte, {user?.fullName || 'Uživatel'}</h1>
             <p className="text-gray-600">Přehled výkonu vaší solární instalace.</p>
           </div>
           <div
@@ -229,9 +229,9 @@ export const DashboardPage = () => {
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <MetricCard title="Current Power" value={Math.round(data.power)} unit="W" icon="⚡" color="yellow" />
-          <MetricCard title="Energy Today" value={Number(data.energy).toFixed(1)} unit="kWh" icon="📈" color="green" />
-          <MetricCard title="Battery Level" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" />
+          <MetricCard title="Aktuální výkon" value={Math.round(data.power)} unit="W" icon="⚡" color="yellow" />
+          <MetricCard title="Energie dnes" value={Number(data.energy).toFixed(1)} unit="kWh" icon="📈" color="green" />
+          <MetricCard title="Stav baterie" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" />
           <MetricCard 
             title="Vyrobená energie" 
             value={Number(data.solarProduction).toFixed(2)} 
@@ -253,11 +253,11 @@ export const DashboardPage = () => {
             icon="♻️" 
             color="purple" 
           />
-          <MetricCard title="Temperature" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" />
+          <MetricCard title="Teplota" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" />
         </div>
 
         <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">Chart Settings</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">Nastavení grafu</h2>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <div>
               <p className="mb-2 text-sm font-medium text-gray-600">Metrika</p>
@@ -329,18 +329,18 @@ export const DashboardPage = () => {
         />
 
         <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">System Health</h2>
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">Stav systému</h2>
           <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
             <div className="rounded-lg bg-gray-50 p-4">
-              <p className="text-gray-500">Inverter Status</p>
+              <p className="text-gray-500">Stav měniče</p>
               <p className="mt-1 font-semibold text-gray-900">{store.isOnline ? 'Online' : 'Offline'}</p>
             </div>
             <div className="rounded-lg bg-gray-50 p-4">
-              <p className="text-gray-500">Efficiency</p>
+              <p className="text-gray-500">Účinnost</p>
               <p className="mt-1 font-semibold text-gray-900">{Number(data.efficiency).toFixed(1)}%</p>
             </div>
             <div className="rounded-lg bg-gray-50 p-4">
-              <p className="text-gray-500">Voltage</p>
+              <p className="text-gray-500">Napětí</p>
               <p className="mt-1 font-semibold text-gray-900">{Math.round(data.voltage)}V</p>
             </div>
           </div>

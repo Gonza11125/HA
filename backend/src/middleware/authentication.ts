@@ -10,7 +10,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     const token = req.cookies?.accessToken;
 
     if (!token) {
-      res.status(401).json({ error: 'Unauthorized - no token provided' });
+      res.status(401).json({ error: 'Neautorizováno - chybí token' });
       return;
     }
 
@@ -20,13 +20,13 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
       const decoded_str = Buffer.from(token, 'base64').toString('utf-8');
       decoded = JSON.parse(decoded_str);
     } catch (e) {
-      res.status(401).json({ error: 'Invalid token' });
+      res.status(401).json({ error: 'Neplatný token' });
       return;
     }
 
     // Validate token structure
     if (!decoded.userId || !decoded.email) {
-      res.status(401).json({ error: 'Invalid token structure' });
+      res.status(401).json({ error: 'Neplatná struktura tokenu' });
       return;
     }
 
@@ -41,7 +41,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     next();
   } catch (error) {
     logger.error('Authentication error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
+    res.status(500).json({ error: 'Autentizace selhala' });
   }
 }
 
@@ -53,19 +53,19 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
     const user = (req as any).user;
 
     if (!user) {
-      res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Neautorizováno' });
       return;
     }
 
     if (user.role !== 'admin') {
-      res.status(403).json({ error: 'Forbidden - admin access required' });
+      res.status(403).json({ error: 'Zakázáno - vyžadován přístup administrátora' });
       return;
     }
 
     next();
   } catch (error) {
     logger.error('Authorization error:', error);
-    res.status(500).json({ error: 'Authorization failed' });
+    res.status(500).json({ error: 'Autorizace selhala' });
   }
 }
 
@@ -88,7 +88,7 @@ export function authenticateDevice(req: Request, res: Response, next: NextFuncti
     }
 
     if (!token) {
-      res.status(401).json({ error: 'Unauthorized - no device token provided' });
+      res.status(401).json({ error: 'Neautorizováno - chybí token zařízení' });
       return;
     }
 
@@ -112,13 +112,13 @@ export function authenticateDevice(req: Request, res: Response, next: NextFuncti
         decoded = JSON.parse(decoded_str);
       }
     } catch (e) {
-      res.status(401).json({ error: 'Invalid device token format' });
+      res.status(401).json({ error: 'Neplatný formát tokenu zařízení' });
       return;
     }
 
     // Validate token structure
     if (!decoded.deviceId && !decoded.siteId) {
-      res.status(401).json({ error: 'Invalid device token structure' });
+      res.status(401).json({ error: 'Neplatná struktura tokenu zařízení' });
       return;
     }
 
@@ -132,6 +132,6 @@ export function authenticateDevice(req: Request, res: Response, next: NextFuncti
     next();
   } catch (error) {
     logger.error('Device authentication error:', error);
-    res.status(500).json({ error: 'Device authentication failed' });
+    res.status(500).json({ error: 'Autentizace zařízení selhala' });
   }
 }

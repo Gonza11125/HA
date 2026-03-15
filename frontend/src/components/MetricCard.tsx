@@ -4,7 +4,7 @@ interface MetricCardProps {
   unit?: string
   icon: string
   trend?: number
-  color?: 'blue' | 'green' | 'yellow' | 'red'
+  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple'
 }
 
 export const MetricCard = ({
@@ -19,14 +19,16 @@ export const MetricCard = ({
     blue: 'bg-blue-50 border-blue-200',
     green: 'bg-green-50 border-green-200',
     yellow: 'bg-yellow-50 border-yellow-200',
-    red: 'bg-red-50 border-red-200'
+    red: 'bg-red-50 border-red-200',
+    purple: 'bg-purple-50 border-purple-200'
   }
 
   const iconColorClasses = {
     blue: 'text-blue-600',
     green: 'text-green-600',
     yellow: 'text-yellow-600',
-    red: 'text-red-600'
+    red: 'text-red-600',
+    purple: 'text-purple-600'
   }
 
   return (
@@ -40,7 +42,7 @@ export const MetricCard = ({
           </div>
           {trend !== undefined && (
             <p className={`text-sm mt-2 ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}% from last hour
+              {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)} % oproti minulé hodině
             </p>
           )}
         </div>

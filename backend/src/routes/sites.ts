@@ -8,10 +8,10 @@ const router = Router();
 router.get('/', authenticate, async (req: Request, res: Response) => {
   try {
     logger.info('Get sites endpoint hit');
-    res.json({ message: 'Get sites route - Implementation in progress' });
+    res.json({ message: 'Seznam lokalit - implementace probíhá' });
   } catch (error) {
     logger.error('Get sites error:', error);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Operace selhala' });
   }
 });
 
@@ -19,10 +19,10 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 router.get('/:id', authenticate, async (req: Request, res: Response) => {
   try {
     logger.info('Get site endpoint hit');
-    res.json({ message: 'Get site route - Implementation in progress' });
+    res.json({ message: 'Detail lokality - implementace probíhá' });
   } catch (error) {
     logger.error('Get site error:', error);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Operace selhala' });
   }
 });
 
@@ -30,10 +30,10 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
 router.post('/', authenticate, async (req: Request, res: Response) => {
   try {
     logger.info('Create site endpoint hit');
-    res.json({ message: 'Create site route - Implementation in progress' });
+    res.json({ message: 'Vytvoření lokality - implementace probíhá' });
   } catch (error) {
     logger.error('Create site error:', error);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Operace selhala' });
   }
 });
 
@@ -42,10 +42,10 @@ router.get('/:id/data', authenticate, async (req: Request, res: Response) => {
   try {
     const { timeRange } = req.query;
     logger.info('Get site data endpoint hit', { timeRange });
-    res.json({ message: 'Get site data route - Implementation in progress' });
+    res.json({ message: 'Data lokality - implementace probíhá' });
   } catch (error) {
     logger.error('Get site data error:', error);
-    res.status(500).json({ error: 'Failed' });
+    res.status(500).json({ error: 'Operace selhala' });
   }
 });
 

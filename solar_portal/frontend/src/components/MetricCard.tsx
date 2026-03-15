@@ -40,7 +40,7 @@ export const MetricCard = ({
           </div>
           {trend !== undefined && (
             <p className={`text-sm mt-2 ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}% from last hour
+              {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)} % oproti minulé hodině
             </p>
           )}
         </div>

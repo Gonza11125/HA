@@ -45,7 +45,7 @@ export const Chart = ({
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <h3 className="mb-3 text-base font-semibold text-gray-900">{title}</h3>
         <div className="flex items-center justify-center rounded-lg bg-gray-50 text-sm text-gray-500" style={{ height }}>
-          No data yet
+          Zatím nejsou k dispozici žádná data
         </div>
       </div>
     )
