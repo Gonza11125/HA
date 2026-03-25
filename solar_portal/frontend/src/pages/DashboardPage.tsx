@@ -207,6 +207,19 @@ const getAutomationSummary = (automation: AutomationRule) => {
   return `${automation.name} ${modeLabel}. Zdroj: ${automation.source}.`
 }
 
+const normalizeDailyEnergyKwh = (value: number) => {
+  if (!Number.isFinite(value) || value < 0) {
+    return 0
+  }
+
+  // Some HA entities report daily energy in Wh; UI expects kWh.
+  if (value > 300) {
+    return value / 1000
+  }
+
+  return value
+}
+
 export const DashboardPage = () => {
   const { user } = useAuthStore()
   const store = useDashboardStore()
@@ -340,6 +353,10 @@ export const DashboardPage = () => {
         selfConsumptionPercent: 0,
       }
 
+  const normalizedEnergy = useMemo(() => normalizeDailyEnergyKwh(Number(data.energy)), [data.energy])
+  const normalizedSolarProduction = useMemo(() => normalizeDailyEnergyKwh(Number(data.solarProduction)), [data.solarProduction])
+  const normalizedGridImport = useMemo(() => normalizeDailyEnergyKwh(Number(data.gridImport)), [data.gridImport])
+
   const selectedMetricConfig = useMemo(() => METRIC_CONFIG[selectedMetric], [selectedMetric])
   const selectedTimeRangeLabel = useMemo(
     () => TIME_RANGE_OPTIONS.find((option) => option.value === timeRange)?.label ?? '24 h',
@@ -349,6 +366,9 @@ export const DashboardPage = () => {
     () =>
       historyData.map((point) => ({
         ...point,
+        energy: normalizeDailyEnergyKwh(Number(point.energy)),
+        gridImport: normalizeDailyEnergyKwh(Number(point.gridImport)),
+        solarProduction: normalizeDailyEnergyKwh(Number(point.solarProduction)),
         time: formatTimeLabel(point.timestamp, timeRange, point.time),
       })),
     [historyData, timeRange],
@@ -357,16 +377,16 @@ export const DashboardPage = () => {
   const lastSyncLabel = useMemo(() => formatTimeLabel(store.lastUpdate, 0.5, 'N/A'), [store.lastUpdate])
   const activeAutomations = useMemo(() => automations.filter((item) => item.enabled).length, [automations])
   const selfConsumptionEnergy = useMemo(
-    () => Number(data.solarProduction) * (Number(data.selfConsumptionPercent) / 100),
-    [data.selfConsumptionPercent, data.solarProduction],
+    () => normalizedSolarProduction * (Number(data.selfConsumptionPercent) / 100),
+    [data.selfConsumptionPercent, normalizedSolarProduction],
   )
   const estimatedHomeUsage = useMemo(
-    () => selfConsumptionEnergy + Number(data.gridImport),
-    [data.gridImport, selfConsumptionEnergy],
+    () => selfConsumptionEnergy + normalizedGridImport,
+    [normalizedGridImport, selfConsumptionEnergy],
   )
   const estimatedExport = useMemo(
-    () => Math.max(Number(data.solarProduction) - selfConsumptionEnergy, 0),
-    [data.solarProduction, selfConsumptionEnergy],
+    () => Math.max(normalizedSolarProduction - selfConsumptionEnergy, 0),
+    [normalizedSolarProduction, selfConsumptionEnergy],
   )
 
   const summaryHeadline = useMemo(() => {
@@ -444,7 +464,7 @@ export const DashboardPage = () => {
       })
     }
 
-    if (Number(data.gridImport) > Number(data.solarProduction) && store.isOnline) {
+    if (normalizedGridImport > normalizedSolarProduction && store.isOnline) {
       items.push({
         title: 'Spotreba site je vyssi nez vlastni vyroba',
         body: 'Zkontrolujte, zda neni vhodne posunout narocnejsi spotrebice na pozdeji.',
@@ -461,7 +481,7 @@ export const DashboardPage = () => {
     }
 
     return items.slice(0, 3)
-  }, [data.battery, data.gridImport, data.selfConsumptionPercent, data.solarProduction, store.isOnline])
+  }, [data.battery, data.selfConsumptionPercent, normalizedGridImport, normalizedSolarProduction, store.isOnline])
 
   const diagnostics = useMemo<DiagnosticsItem[]>(() => {
     return [
@@ -646,10 +666,10 @@ export const DashboardPage = () => {
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <MetricCard title="Aktualni vykon" value={Math.round(data.power)} unit="W" icon="⚡" color="yellow" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('power')} />
-          <MetricCard title="Energie dnes" value={Number(data.energy).toFixed(1)} unit="kWh" icon="📈" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('energy')} />
+          <MetricCard title="Energie dnes" value={normalizedEnergy.toFixed(1)} unit="kWh" icon="📈" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('energy')} />
           <MetricCard title="Stav baterie" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('battery')} />
-          <MetricCard title="Vyrobena energie" value={Number(data.solarProduction).toFixed(2)} unit="kWh" icon="☀️" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('solarProduction')} />
-          <MetricCard title="Nakoupena energie" value={Number(data.gridImport).toFixed(2)} unit="kWh" icon="🏭" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('gridImport')} />
+          <MetricCard title="Vyrobena energie" value={normalizedSolarProduction.toFixed(2)} unit="kWh" icon="☀️" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('solarProduction')} />
+          <MetricCard title="Nakoupena energie" value={normalizedGridImport.toFixed(2)} unit="kWh" icon="🏭" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('gridImport')} />
           <MetricCard title="Vyuziti FVE" value={Math.round(data.selfConsumptionPercent)} unit="%" icon="♻️" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('selfConsumptionPercent')} />
           <MetricCard title="Teplota" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('temperature')} />
         </div>
@@ -667,7 +687,7 @@ export const DashboardPage = () => {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-emerald-700">Panely</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{Number(data.solarProduction).toFixed(2)} kWh</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">{normalizedSolarProduction.toFixed(2)} kWh</p>
                 <p className="mt-1 text-xs text-slate-600">Celkem vyrobeno fotovoltaikou.</p>
               </div>
               <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
@@ -682,7 +702,7 @@ export const DashboardPage = () => {
               </div>
               <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-rose-700">Sit a prebytky</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{Number(data.gridImport).toFixed(2)} / {estimatedExport.toFixed(2)} kWh</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">{normalizedGridImport.toFixed(2)} / {estimatedExport.toFixed(2)} kWh</p>
                 <p className="mt-1 text-xs text-slate-600">Prvni cislo je odber ze site, druhe odhad prebytku.</p>
               </div>
             </div>
