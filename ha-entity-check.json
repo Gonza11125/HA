@@ -1,0 +1,37 @@
+﻿[
+    {
+        "entity":  "sensor.solax_inverter_output_power",
+        "state":  "ERROR",
+        "unit":  "",
+        "friendly_name":  "",
+        "last_changed":  "The operation has timed out."
+    },
+    {
+        "entity":  "sensor.solax_inverter_energy_today",
+        "state":  "ERROR",
+        "unit":  "",
+        "friendly_name":  "",
+        "last_changed":  "The operation has timed out."
+    },
+    {
+        "entity":  "sensor.solax_inverter_battery_capacity",
+        "state":  "ERROR",
+        "unit":  "",
+        "friendly_name":  "",
+        "last_changed":  "The operation has timed out."
+    },
+    {
+        "entity":  "sensor.solax_inverter_battery_voltage_charge",
+        "state":  "ERROR",
+        "unit":  "",
+        "friendly_name":  "",
+        "last_changed":  "The operation has timed out."
+    },
+    {
+        "entity":  "sensor.solax_inverter_battery_temperature",
+        "state":  "ERROR",
+        "unit":  "",
+        "friendly_name":  "",
+        "last_changed":  "The operation has timed out."
+    }
+]

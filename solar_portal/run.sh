@@ -43,13 +43,13 @@ const defaults = {
     ha_url: 'http://homeassistant.local:8123',
     polling_interval: 5000,
     ha_automations: '[]',
-    entity_power_now: 'sensor.solax_inverter_output_power',
-    entity_energy_today: 'sensor.solax_inverter_energy_today',
-    entity_battery_soc: 'sensor.solax_inverter_battery_capacity',
-    entity_battery_voltage: 'sensor.solax_inverter_battery_voltage_charge',
+    entity_power_now: 'sensor.alpha_ess_total_power_inverter',
+    entity_energy_today: 'sensor.solar_energy_today_2',
+    entity_battery_soc: 'sensor.alpha_ess_soc_battery',
+    entity_battery_voltage: 'sensor.alpha_ess_battery_voltage',
     entity_grid_import: '',
     entity_grid_export: '',
-    entity_solar_production: ''
+    entity_solar_production: 'sensor.solar_energy_today_2'
 }
 
 let options = {}
