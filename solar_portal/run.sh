@@ -42,6 +42,7 @@ const outputPath = '/data/agent-config.json'
 const defaults = {
     ha_url: 'http://homeassistant.local:8123',
     polling_interval: 5000,
+    ha_automations: '[]',
     entity_power_now: 'sensor.solax_inverter_output_power',
     entity_energy_today: 'sensor.solax_inverter_energy_today',
     entity_battery_soc: 'sensor.solax_inverter_battery_capacity',
@@ -74,6 +75,33 @@ const haUrl = String(options.ha_url || defaults.ha_url).replace(/\/+$/, '')
 const haToken = String(options.ha_token || '').trim()
 const pairingCodeRaw = String(options.pairing_code || '').trim()
 const pollingInterval = Number(options.polling_interval || defaults.polling_interval)
+const rawHaAutomations = typeof options.ha_automations === 'string' ? options.ha_automations : defaults.ha_automations
+
+const parseAutomationDefinitions = (raw) => {
+    try {
+        const parsed = JSON.parse(raw)
+        const list = Array.isArray(parsed) ? parsed : [parsed]
+
+        return list
+            .filter((item) => typeof item === 'object' && item !== null)
+            .map((item, index) => {
+                const mode = item.mode === 'manual' ? 'manual' : 'auto'
+                return {
+                    id: String(item.id || `ha-auto-${index + 1}`),
+                    name: String(item.name || item.alias || `HA automatizace ${index + 1}`),
+                    enabled: Boolean(item.enabled ?? false),
+                    mode,
+                    source: 'HA settings',
+                    lastRun: String(item.lastRun || 'N/A')
+                }
+            })
+    } catch (error) {
+        console.error('[WARN] Failed to parse ha_automations JSON from add-on options:', error.message)
+        return []
+    }
+}
+
+const haAutomations = parseAutomationDefinitions(rawHaAutomations)
 
 const entityMappings = [
     { type: 'power_now', entityId: String(options.entity_power_now || defaults.entity_power_now), friendlyName: 'Power Now', unit: 'W' },
@@ -107,6 +135,7 @@ const config = {
     haToken,
     cloudUrl: 'http://localhost:5000/api',
     pollingInterval,
+    haAutomations,
     entityMappings
 }
 

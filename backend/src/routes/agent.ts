@@ -4,9 +4,48 @@ import { logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 import { updateLiveDataFromAgent } from '../services/liveDataStore';
+import fs from 'fs';
 
 const router = Router();
 const DEFAULT_PAIRING_CODE = '150N6E';
+const AGENT_CONFIG_PATH = '/data/agent-config.json';
+
+interface AutomationConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  mode: 'auto' | 'manual';
+  source: 'HA settings';
+  lastRun: string;
+}
+
+function getAutomationsFromAgentConfig(): AutomationConfig[] {
+  try {
+    if (!fs.existsSync(AGENT_CONFIG_PATH)) {
+      return [];
+    }
+
+    const raw = fs.readFileSync(AGENT_CONFIG_PATH, 'utf-8');
+    const parsed = JSON.parse(raw) as { haAutomations?: unknown };
+    if (!Array.isArray(parsed.haAutomations)) {
+      return [];
+    }
+
+    return parsed.haAutomations
+      .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+      .map((item, index) => ({
+        id: String(item.id ?? `ha-automation-${index + 1}`),
+        name: String(item.name ?? item.alias ?? `HA automatizace ${index + 1}`),
+        enabled: Boolean(item.enabled ?? false),
+        mode: item.mode === 'manual' ? 'manual' : 'auto',
+        source: 'HA settings' as const,
+        lastRun: String(item.lastRun ?? 'N/A')
+      }));
+  } catch (error) {
+    logger.warn('Failed to read HA automations from agent config', error);
+    return [];
+  }
+}
 
 function getPairingCode(): string {
   return DEFAULT_PAIRING_CODE;
@@ -134,10 +173,12 @@ router.post('/push', authenticateDevice, async (req: Request, res: Response) => 
 // GET /api/agent/config - Get agent configuration
 router.get('/config', async (req: Request, res: Response) => {
   try {
+    const haAutomations = getAutomationsFromAgentConfig();
     const config = {
       pollingInterval: 5000,
       maxRetries: 3,
       timeout: 15000,
+      haAutomations,
       endpoints: {
         auth: '/api/auth/login',
         push: '/api/agent/push',

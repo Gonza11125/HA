@@ -30,7 +30,7 @@ interface AutomationRule {
   name: string
   enabled: boolean
   mode: 'auto' | 'manual'
-  source: 'HA import' | 'Portal'
+  source: 'HA import' | 'HA settings' | 'Portal'
   lastRun: string
 }
 
@@ -159,6 +159,15 @@ const formatTimeLabel = (timestamp?: string, range?: TimeRange, fallback?: strin
   return date.toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' })
 }
 
+const normalizeAutomation = (item: Record<string, unknown>, index: number, source: AutomationRule['source']): AutomationRule => ({
+  id: String(item.id ?? `${source}-${index + 1}`),
+  name: String(item.name ?? item.alias ?? `Automatizace ${index + 1}`),
+  enabled: Boolean(item.enabled ?? item.active ?? false),
+  mode: item.mode === 'manual' ? 'manual' : 'auto',
+  source,
+  lastRun: String(item.lastRun ?? 'N/A'),
+})
+
 export const DashboardPage = () => {
   const { user } = useAuthStore()
   const store = useDashboardStore()
@@ -215,6 +224,29 @@ export const DashboardPage = () => {
       setIsPaired(true)
     }
   }, [store.isOnline])
+
+  useEffect(() => {
+    const loadAutomationsFromHaSettings = async () => {
+      try {
+        const { data } = await apiClient.get('/agent/config')
+        const items = Array.isArray(data?.config?.haAutomations) ? data.config.haAutomations : []
+        if (items.length === 0) {
+          return
+        }
+
+        const parsed = items
+          .filter((item: unknown): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+          .map((item: Record<string, unknown>, index: number) => normalizeAutomation(item, index, 'HA settings'))
+
+        setAutomations(parsed)
+        setUploadNotice('Automatizace nacteny z HA nastaveni add-onu.')
+      } catch {
+        // Keep defaults when backend config is unavailable.
+      }
+    }
+
+    void loadAutomationsFromHaSettings()
+  }, [])
 
   useEffect(() => {
     if (!isPaired || !store.isOnline) {
@@ -301,11 +333,8 @@ export const DashboardPage = () => {
         const importedItems: AutomationRule[] = parsedList
           .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
           .map((item, index) => ({
+            ...normalizeAutomation(item, index, 'HA import'),
             id: String(item.id ?? `${normalizedName}-${index}`),
-            name: String(item.alias ?? item.name ?? `Automatizace ${index + 1}`),
-            enabled: Boolean(item.enabled ?? item.active ?? false),
-            mode: (item.mode === 'manual' ? 'manual' : 'auto') as 'auto' | 'manual',
-            source: 'HA import' as const,
             lastRun: `Import ${now}`,
           }))
 
@@ -492,6 +521,23 @@ export const DashboardPage = () => {
             subtitle="Kliknete pro popis veliciny"
             onClick={() => setOpenedMetricHelp('temperature')}
           />
+        </div>
+
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-3 text-lg font-semibold text-slate-900">Co jednotlive hodnoty znamenaji</h2>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {(Object.keys(METRIC_HELP) as DashboardMetric[]).map((metric) => (
+              <button
+                key={metric}
+                type="button"
+                onClick={() => setOpenedMetricHelp(metric)}
+                className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-left hover:border-cyan-300 hover:bg-cyan-50"
+              >
+                <p className="text-sm font-semibold text-slate-900">{METRIC_HELP[metric].label}</p>
+                <p className="mt-1 text-xs text-slate-600">{METRIC_HELP[metric].description}</p>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="mb-6 rounded-2xl border border-cyan-100 bg-white p-5 shadow-sm">
