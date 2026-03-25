@@ -4,7 +4,9 @@ interface MetricCardProps {
   unit?: string
   icon: string
   trend?: number
+  subtitle?: string
   color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple'
+  onClick?: () => void
 }
 
 export const MetricCard = ({
@@ -13,6 +15,8 @@ export const MetricCard = ({
   unit = '',
   icon,
   trend,
+  subtitle,
+  onClick,
   color = 'blue'
 }: MetricCardProps) => {
   const colorClasses = {
@@ -32,7 +36,14 @@ export const MetricCard = ({
   }
 
   return (
-    <div className={`${colorClasses[color]} border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow`}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${colorClasses[color]} w-full border rounded-xl p-6 text-left shadow-sm transition-shadow ${
+        onClick ? 'hover:shadow-md' : 'cursor-default'
+      }`}
+      disabled={!onClick}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-gray-600 text-sm font-medium">{title}</p>
@@ -40,6 +51,7 @@ export const MetricCard = ({
             <span className="text-3xl font-bold text-gray-900">{value}</span>
             {unit && <span className="text-gray-600 text-sm">{unit}</span>}
           </div>
+          {subtitle && <p className="mt-2 text-xs text-gray-500">{subtitle}</p>}
           {trend !== undefined && (
             <p className={`text-sm mt-2 ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)} % oproti minulé hodině
@@ -48,7 +60,7 @@ export const MetricCard = ({
         </div>
         <span className={`text-4xl ${iconColorClasses[color]}`}>{icon}</span>
       </div>
-    </div>
+    </button>
   )
 }
 
