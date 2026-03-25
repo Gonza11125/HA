@@ -1,6 +1,7 @@
 ﻿import { useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { useAuthStore } from "../hooks/useAuthStore"
+import { apiClient } from "../utils/api"
 
 export const Header = () => {
   const navigate = useNavigate()
@@ -11,8 +12,8 @@ export const Header = () => {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/data/status")
-        setIsOnline(response.ok)
+        const response = await apiClient.get("/data/status")
+        setIsOnline(response.status === 200)
       } catch (error) {
         setIsOnline(false)
       }

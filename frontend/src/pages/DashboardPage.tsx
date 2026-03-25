@@ -41,64 +41,76 @@ interface MetricConfig {
   color: string
 }
 
+interface InsightItem {
+  title: string
+  body: string
+  tone: 'good' | 'warn' | 'info'
+}
+
+interface DiagnosticsItem {
+  label: string
+  value: string
+  tone: 'good' | 'warn' | 'neutral'
+}
+
 const METRIC_CONFIG: Record<ChartMetric, MetricConfig> = {
-  power: { label: 'Vykon', title: 'Aktualni vykon', unit: 'W', color: '#3b82f6' },
-  energy: { label: 'Energie', title: 'Vyrobena energie', unit: 'kWh', color: '#10b981' },
-  battery: { label: 'Baterie', title: 'Stav baterie', unit: '%', color: '#f59e0b' },
-  gridImport: { label: 'Odber ze site', title: 'Nakoupena energie', unit: 'kWh', color: '#ef4444' },
+  power: { label: 'Vykon', title: 'Aktualni vykon', unit: 'W', color: '#f59e0b' },
+  energy: { label: 'Energie', title: 'Vyroba dnes', unit: 'kWh', color: '#10b981' },
+  battery: { label: 'Baterie', title: 'Stav baterie', unit: '%', color: '#2563eb' },
+  gridImport: { label: 'Sit', title: 'Odber ze site', unit: 'kWh', color: '#ef4444' },
   solarProduction: { label: 'FVE', title: 'Vyrobena energie', unit: 'kWh', color: '#22c55e' },
-  selfConsumptionPercent: { label: 'Vlastni spotreba', title: 'Vyuziti FVE', unit: '%', color: '#0ea5e9' },
+  selfConsumptionPercent: { label: 'Sobestacnost', title: 'Vyuziti FVE', unit: '%', color: '#06b6d4' },
 }
 
 const METRIC_HELP: Record<DashboardMetric, MetricHelp> = {
   power: {
     label: 'Aktualni vykon',
     unit: 'W',
-    description: 'Okamzity elektricky vykon cele instalace v tomto momentu.',
-    interpretation: 'Vyssi cislo znamena vyssi okamzitou vyrobu nebo odber.',
-    updateInterval: 'Kazdych 5-10 sekund podle dostupnosti dat.',
+    description: 'Okamzity vykon, ktery system prave vyrabi nebo zpracovava.',
+    interpretation: 'Vyssi hodnota obvykle znamena silnejsi okamzitou vyrobu.',
+    updateInterval: 'Kazdych 5 az 10 sekund.',
   },
   energy: {
     label: 'Energie dnes',
     unit: 'kWh',
-    description: 'Soucet energie vyrobene od pulnoci.',
-    interpretation: 'Roste behem dne; vecer se ustali.',
-    updateInterval: 'Prubezne behem dne.',
+    description: 'Souhrn vyroby od pulnoci do teto chvile.',
+    interpretation: 'Hodnota behem dne roste a vecer se ustali.',
+    updateInterval: 'Prubezne behem celeho dne.',
   },
   battery: {
     label: 'Stav baterie',
     unit: '%',
-    description: 'Aktualni uroven nabiti akumulatoru.',
-    interpretation: 'Nad 80 % vysoka rezerva, pod 20 % nizka rezerva.',
-    updateInterval: 'Kazdych 5-10 sekund.',
+    description: 'Kolik energie je aktualne ulozeno v baterii.',
+    interpretation: 'Nad 80 % vysoka rezerva, pod 20 % je baterie nizko.',
+    updateInterval: 'Kazdych 5 az 10 sekund.',
   },
   solarProduction: {
     label: 'Vyrobena energie',
     unit: 'kWh',
-    description: 'Celkove mnozstvi energie z fotovoltaiky.',
-    interpretation: 'Pomaha porovnat vykon mezi dny a tydny.',
+    description: 'Celkovy objem energie vyrobeny fotovoltaikou.',
+    interpretation: 'Pomaha porovnat produktivitu mezi dny a tydny.',
     updateInterval: 'Prubezne behem dne.',
   },
   gridImport: {
     label: 'Nakoupena energie',
     unit: 'kWh',
-    description: 'Energie odebrana ze site pri nedostatku vlastni vyroby.',
-    interpretation: 'Nizsi hodnota obvykle znamena lepsi sobestacnost.',
+    description: 'Energie odebrana ze site, kdyz vlastni vyroba nestaci.',
+    interpretation: 'Nizsi hodnota znamena mensi zavislost na siti.',
     updateInterval: 'Prubezne behem dne.',
   },
   selfConsumptionPercent: {
     label: 'Vyuziti FVE',
     unit: '%',
-    description: 'Podil vlastni spotreby z vyrobene solarni energie.',
-    interpretation: 'Vyssi procento znamena efektivnejsi vyuziti vyroby doma.',
+    description: 'Podil vyrobene energie, kterou vyuzijete doma.',
+    interpretation: 'Vyssi procento znamena lepsi vyuziti vlastni vyroby.',
     updateInterval: 'Prubezne behem dne.',
   },
   temperature: {
     label: 'Teplota',
     unit: 'degC',
-    description: 'Teplota merena na zarizeni nebo v technicke casti systemu.',
-    interpretation: 'Pomaha odhalit prehrivani zarizeni.',
-    updateInterval: 'Kazdych 10-30 sekund.',
+    description: 'Teplota zarizeni nebo technicke casti systemu.',
+    interpretation: 'Vyssi teplota muze signalizovat zatez nebo prehrivani.',
+    updateInterval: 'Kazdych 10 az 30 sekund.',
   },
 }
 
@@ -116,7 +128,7 @@ const DEFAULT_AUTOMATIONS: AutomationRule[] = [
     name: 'Ohrev vody pri prebytku',
     enabled: true,
     mode: 'auto',
-    source: 'HA import',
+    source: 'HA settings',
     lastRun: 'Dnes 12:41',
   },
   {
@@ -124,10 +136,22 @@ const DEFAULT_AUTOMATIONS: AutomationRule[] = [
     name: 'Nabijeni EV v noci',
     enabled: false,
     mode: 'auto',
-    source: 'HA import',
+    source: 'HA settings',
     lastRun: 'Vcera 23:10',
   },
 ]
+
+const toneClasses: Record<InsightItem['tone'], string> = {
+  good: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  warn: 'border-amber-200 bg-amber-50 text-amber-900',
+  info: 'border-cyan-200 bg-cyan-50 text-cyan-900',
+}
+
+const diagnosticToneClasses: Record<DiagnosticsItem['tone'], string> = {
+  good: 'bg-emerald-100 text-emerald-700',
+  warn: 'bg-amber-100 text-amber-800',
+  neutral: 'bg-slate-100 text-slate-700',
+}
 
 const formatTimeLabel = (timestamp?: string, range?: TimeRange, fallback?: string) => {
   if (!timestamp) {
@@ -167,6 +191,21 @@ const normalizeAutomation = (item: Record<string, unknown>, index: number, sourc
   source,
   lastRun: String(item.lastRun ?? 'N/A'),
 })
+
+const getBatteryLabel = (batteryLevel: number) => {
+  if (batteryLevel >= 80) {
+    return 'Vysoka rezerva'
+  }
+  if (batteryLevel >= 35) {
+    return 'Stabilni stav'
+  }
+  return 'Nizka rezerva'
+}
+
+const getAutomationSummary = (automation: AutomationRule) => {
+  const modeLabel = automation.mode === 'auto' ? 'bezi automaticky' : 'ceka na rucni zasah'
+  return `${automation.name} ${modeLabel}. Zdroj: ${automation.source}.`
+}
 
 export const DashboardPage = () => {
   const { user } = useAuthStore()
@@ -215,8 +254,8 @@ export const DashboardPage = () => {
       }
     }
 
-    loadPairingCode()
-    loadPairingStatus()
+    void loadPairingCode()
+    void loadPairingStatus()
   }, [])
 
   useEffect(() => {
@@ -262,7 +301,7 @@ export const DashboardPage = () => {
       }
     }
 
-    loadHistory()
+    void loadHistory()
     const interval = setInterval(loadHistory, 10000)
     return () => clearInterval(interval)
   }, [isPaired, store.isOnline, timeRange])
@@ -315,7 +354,139 @@ export const DashboardPage = () => {
     [historyData, timeRange],
   )
 
+  const lastSyncLabel = useMemo(() => formatTimeLabel(store.lastUpdate, 0.5, 'N/A'), [store.lastUpdate])
+  const activeAutomations = useMemo(() => automations.filter((item) => item.enabled).length, [automations])
+  const selfConsumptionEnergy = useMemo(
+    () => Number(data.solarProduction) * (Number(data.selfConsumptionPercent) / 100),
+    [data.selfConsumptionPercent, data.solarProduction],
+  )
+  const estimatedHomeUsage = useMemo(
+    () => selfConsumptionEnergy + Number(data.gridImport),
+    [data.gridImport, selfConsumptionEnergy],
+  )
+  const estimatedExport = useMemo(
+    () => Math.max(Number(data.solarProduction) - selfConsumptionEnergy, 0),
+    [data.solarProduction, selfConsumptionEnergy],
+  )
+
+  const summaryHeadline = useMemo(() => {
+    if (!store.isOnline) {
+      return 'System je offline a ceka na dalsi synchronizaci.'
+    }
+
+    if (Number(data.battery) < 20) {
+      return 'Baterie je nizko, system potrebuje setrny provoz.'
+    }
+
+    if (Number(data.power) > 0) {
+      return 'Vyroba bezi a web ukazuje aktualni stav cele instalace.'
+    }
+
+    return 'Elektrarna je pripojena, ale aktualni vykon je nizky.'
+  }, [data.battery, data.power, store.isOnline])
+
   const statusTone = store.isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+
+  const alerts = useMemo<InsightItem[]>(() => {
+    const items: InsightItem[] = []
+
+    if (!store.isOnline) {
+      items.push({
+        title: 'Backend nebo agent neodpovida',
+        body: 'Web nema cerstva data. Zkontrolujte spojeni a restart add-onu.',
+        tone: 'warn',
+      })
+    }
+
+    if (Number(data.battery) < 20) {
+      items.push({
+        title: 'Baterie je pod 20 %',
+        body: 'Rezerva je nizka. Omezte velke spotrebice nebo nabijeni odlozte.',
+        tone: 'warn',
+      })
+    }
+
+    if (Number(data.temperature) >= 45) {
+      items.push({
+        title: 'Teplota zarizeni je zvysena',
+        body: 'Vysoka teplota muze znamenat silnou zatez nebo horsi chlazeni.',
+        tone: 'warn',
+      })
+    }
+
+    if (items.length === 0) {
+      items.push({
+        title: 'Bez kritickych upozorneni',
+        body: 'Web nevidi zadny akutni problem v aktualnich datech.',
+        tone: 'good',
+      })
+    }
+
+    return items
+  }, [data.battery, data.temperature, store.isOnline])
+
+  const recommendations = useMemo<InsightItem[]>(() => {
+    const items: InsightItem[] = []
+
+    if (Number(data.selfConsumptionPercent) >= 70) {
+      items.push({
+        title: 'Dobre vyuzivate vlastni vyrobu',
+        body: 'Sobestacnost je vysoka. Dnes je vhodny cas pro planovane spotrebice.',
+        tone: 'good',
+      })
+    }
+
+    if (Number(data.battery) >= 80) {
+      items.push({
+        title: 'Baterie ma vysokou rezervu',
+        body: 'Muzete vyuzit vice energie doma nebo aktivovat dalsi automatizace.',
+        tone: 'info',
+      })
+    }
+
+    if (Number(data.gridImport) > Number(data.solarProduction) && store.isOnline) {
+      items.push({
+        title: 'Spotreba site je vyssi nez vlastni vyroba',
+        body: 'Zkontrolujte, zda neni vhodne posunout narocnejsi spotrebice na pozdeji.',
+        tone: 'info',
+      })
+    }
+
+    if (items.length === 0) {
+      items.push({
+        title: 'System funguje standardne',
+        body: 'Neni potreba delat okamzitou akci. Sledujte jen dalsi vyvoj dne.',
+        tone: 'info',
+      })
+    }
+
+    return items.slice(0, 3)
+  }, [data.battery, data.gridImport, data.selfConsumptionPercent, data.solarProduction, store.isOnline])
+
+  const diagnostics = useMemo<DiagnosticsItem[]>(() => {
+    return [
+      {
+        label: 'Pripojeni systemu',
+        value: store.isOnline ? 'Online' : 'Offline',
+        tone: store.isOnline ? 'good' : 'warn',
+      },
+      {
+        label: 'Posledni sync',
+        value: lastSyncLabel || 'N/A',
+        tone: store.isOnline ? 'neutral' : 'warn',
+      },
+      {
+        label: 'Baterie',
+        value: getBatteryLabel(Number(data.battery)),
+        tone: Number(data.battery) >= 35 ? 'good' : 'warn',
+      },
+      {
+        label: 'Automatizace',
+        value: `${activeAutomations} aktivni`,
+        tone: activeAutomations > 0 ? 'good' : 'neutral',
+      },
+    ]
+  }, [activeAutomations, data.battery, lastSyncLabel, store.isOnline])
 
   const handleAutomationUpload = async (file?: File) => {
     if (!file) {
@@ -438,101 +609,130 @@ export const DashboardPage = () => {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff7ed_0%,_#ecfeff_36%,_#f8fafc_70%)] py-8">
       <div className="mx-auto max-w-7xl px-4">
-        <div className="mb-6 rounded-2xl border border-cyan-100 bg-white/90 p-6 shadow-sm backdrop-blur">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="mb-6 overflow-hidden rounded-3xl border border-cyan-100 bg-white/90 shadow-sm backdrop-blur">
+          <div className="grid gap-6 p-6 lg:grid-cols-[1.3fr_0.7fr]">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">Solar Portal</p>
-              <h1 className="text-3xl font-bold text-slate-900">Vitejte, {user?.fullName || 'Uzivatel'}</h1>
-              <p className="text-slate-600">Vsechny klicove hodnoty i automatizace Home Assistantu na jednom miste.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-700">
-                Posledni synchronizace: {new Date(store.lastUpdate).toLocaleTimeString('cs-CZ')}
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Solar Portal</p>
+              <h1 className="mt-2 text-3xl font-bold text-slate-900">Vitejte, {user?.fullName || 'Uzivatel'}</h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-600">{summaryHeadline}</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Posledni synchronizace</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">{lastSyncLabel || 'N/A'}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Rezerva baterie</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">{getBatteryLabel(Number(data.battery))}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Aktivni automatizace</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">{activeAutomations}</p>
+                </div>
               </div>
-              <div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${statusTone}`}>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <div className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium ${statusTone}`}>
                 <span className={`h-2.5 w-2.5 rounded-full ${store.isOnline ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                {store.isOnline ? 'Online' : 'Offline'}
+                {store.isOnline ? 'Online a synchronizovano' : 'Offline nebo ceka na data'}
+              </div>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+                <p className="font-semibold">Doporuceni pro uzivatele</p>
+                <p className="mt-1">Kdyz system hlasi offline nebo nizkou rezervu baterie, web ma jasne ukazat dalsi krok bez technickych detailu.</p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <MetricCard
-            title="Aktualni vykon"
-            value={Math.round(data.power)}
-            unit="W"
-            icon="⚡"
-            color="yellow"
-            subtitle="Kliknete pro popis veliciny"
-            onClick={() => setOpenedMetricHelp('power')}
-          />
-          <MetricCard
-            title="Energie dnes"
-            value={Number(data.energy).toFixed(1)}
-            unit="kWh"
-            icon="📈"
-            color="green"
-            subtitle="Kliknete pro popis veliciny"
-            onClick={() => setOpenedMetricHelp('energy')}
-          />
-          <MetricCard
-            title="Stav baterie"
-            value={Math.round(data.battery)}
-            unit="%"
-            icon="🔋"
-            color="blue"
-            subtitle="Kliknete pro popis veliciny"
-            onClick={() => setOpenedMetricHelp('battery')}
-          />
-          <MetricCard
-            title="Vyrobena energie"
-            value={Number(data.solarProduction).toFixed(2)}
-            unit="kWh"
-            icon="☀️"
-            color="green"
-            subtitle="Kliknete pro popis veliciny"
-            onClick={() => setOpenedMetricHelp('solarProduction')}
-          />
-          <MetricCard
-            title="Nakoupena energie"
-            value={Number(data.gridImport).toFixed(2)}
-            unit="kWh"
-            icon="🏭"
-            color="red"
-            subtitle="Kliknete pro popis veliciny"
-            onClick={() => setOpenedMetricHelp('gridImport')}
-          />
-          <MetricCard
-            title="Vyuziti FVE"
-            value={Math.round(data.selfConsumptionPercent)}
-            unit="%"
-            icon="♻️"
-            color="blue"
-            subtitle="Kliknete pro popis veliciny"
-            onClick={() => setOpenedMetricHelp('selfConsumptionPercent')}
-          />
-          <MetricCard
-            title="Teplota"
-            value={Math.round(data.temperature)}
-            unit="°C"
-            icon="🌡️"
-            color="red"
-            subtitle="Kliknete pro popis veliciny"
-            onClick={() => setOpenedMetricHelp('temperature')}
-          />
+          <MetricCard title="Aktualni vykon" value={Math.round(data.power)} unit="W" icon="⚡" color="yellow" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('power')} />
+          <MetricCard title="Energie dnes" value={Number(data.energy).toFixed(1)} unit="kWh" icon="📈" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('energy')} />
+          <MetricCard title="Stav baterie" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('battery')} />
+          <MetricCard title="Vyrobena energie" value={Number(data.solarProduction).toFixed(2)} unit="kWh" icon="☀️" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('solarProduction')} />
+          <MetricCard title="Nakoupena energie" value={Number(data.gridImport).toFixed(2)} unit="kWh" icon="🏭" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('gridImport')} />
+          <MetricCard title="Vyuziti FVE" value={Math.round(data.selfConsumptionPercent)} unit="%" icon="♻️" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('selfConsumptionPercent')} />
+          <MetricCard title="Teplota" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('temperature')} />
+        </div>
+
+        <div className="mb-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Energeticka bilance dnes</h2>
+                <p className="text-sm text-slate-600">Jednoduchy prehled, odkud energie prisla a jak se vyuzila.</p>
+              </div>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Dnes</span>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-emerald-700">Panely</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">{Number(data.solarProduction).toFixed(2)} kWh</p>
+                <p className="mt-1 text-xs text-slate-600">Celkem vyrobeno fotovoltaikou.</p>
+              </div>
+              <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-cyan-700">Dum</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">{estimatedHomeUsage.toFixed(2)} kWh</p>
+                <p className="mt-1 text-xs text-slate-600">Odhad energie vyuzite doma dnes.</p>
+              </div>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-amber-700">Baterie</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">{Math.round(data.battery)} %</p>
+                <p className="mt-1 text-xs text-slate-600">Aktualni ulozena rezerva energie.</p>
+              </div>
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-rose-700">Sit a prebytky</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">{Number(data.gridImport).toFixed(2)} / {estimatedExport.toFixed(2)} kWh</p>
+                <p className="mt-1 text-xs text-slate-600">Prvni cislo je odber ze site, druhe odhad prebytku.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">Diagnostika</h2>
+            <p className="mt-1 text-sm text-slate-600">Rychly zdravotni stav webu a systemu.</p>
+            <div className="mt-4 grid gap-3">
+              {diagnostics.map((item) => (
+                <div key={item.label} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                  <span className="text-sm text-slate-600">{item.label}</span>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${diagnosticToneClasses[item.tone]}`}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">Upozorneni</h2>
+            <div className="mt-4 space-y-3">
+              {alerts.map((item) => (
+                <div key={item.title} className={`rounded-2xl border px-4 py-3 ${toneClasses[item.tone]}`}>
+                  <p className="text-sm font-semibold">{item.title}</p>
+                  <p className="mt-1 text-sm opacity-90">{item.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">Doporuceni pro dnes</h2>
+            <div className="mt-4 space-y-3">
+              {recommendations.map((item) => (
+                <div key={item.title} className={`rounded-2xl border px-4 py-3 ${toneClasses[item.tone]}`}>
+                  <p className="text-sm font-semibold">{item.title}</p>
+                  <p className="mt-1 text-sm opacity-90">{item.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="mb-3 text-lg font-semibold text-slate-900">Co jednotlive hodnoty znamenaji</h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {(Object.keys(METRIC_HELP) as DashboardMetric[]).map((metric) => (
-              <button
-                key={metric}
-                type="button"
-                onClick={() => setOpenedMetricHelp(metric)}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-left hover:border-cyan-300 hover:bg-cyan-50"
-              >
+              <button key={metric} type="button" onClick={() => setOpenedMetricHelp(metric)} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-left hover:border-cyan-300 hover:bg-cyan-50">
                 <p className="text-sm font-semibold text-slate-900">{METRIC_HELP[metric].label}</p>
                 <p className="mt-1 text-xs text-slate-600">{METRIC_HELP[metric].description}</p>
               </button>
@@ -542,7 +742,10 @@ export const DashboardPage = () => {
 
         <div className="mb-6 rounded-2xl border border-cyan-100 bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-slate-900">Automatizace</h2>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Automatizace</h2>
+              <p className="text-sm text-slate-600">Jednoduchy prehled toho, co je zapnute, co ceka a co bylo spusteno naposledy.</p>
+            </div>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">
               Nahrat automatizaci
               <input
@@ -557,68 +760,39 @@ export const DashboardPage = () => {
               />
             </label>
           </div>
-          <p className="mb-4 text-sm text-slate-600">
-            Automatizace vytvorite v Home Assistantu a zde je jen prehledne spravujete. Uzivatel vidi stav sepnuto / nesepnuto a muze prepinat rezim.
-          </p>
           {uploadNotice && <p className="mb-4 rounded-lg bg-cyan-50 px-3 py-2 text-sm text-cyan-800">{uploadNotice}</p>}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] border-separate border-spacing-y-2 text-left text-sm">
-              <thead>
-                <tr className="text-slate-500">
-                  <th className="px-3 py-2">Nazev</th>
-                  <th className="px-3 py-2">Stav</th>
-                  <th className="px-3 py-2">Rezim</th>
-                  <th className="px-3 py-2">Posledni spusteni</th>
-                  <th className="px-3 py-2">Zdroj</th>
-                  <th className="px-3 py-2">Akce</th>
-                </tr>
-              </thead>
-              <tbody>
-                {automations.map((automation) => (
-                  <tr key={automation.id} className="rounded-xl bg-slate-50 text-slate-800">
-                    <td className="rounded-l-xl px-3 py-3 font-semibold">{automation.name}</td>
-                    <td className="px-3 py-3">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          automation.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'
-                        }`}
-                      >
-                        {automation.enabled ? 'SEPNUTO' : 'NESEPNUTO'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <button
-                        type="button"
-                        onClick={() => switchAutomationMode(automation.id)}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                      >
-                        {automation.mode === 'auto' ? 'Automaticky' : 'Rucne'}
-                      </button>
-                    </td>
-                    <td className="px-3 py-3 text-slate-600">{automation.lastRun}</td>
-                    <td className="px-3 py-3 text-slate-600">{automation.source}</td>
-                    <td className="rounded-r-xl px-3 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => toggleAutomation(automation.id)}
-                          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
-                        >
-                          {automation.enabled ? 'Vypnout' : 'Zapnout'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => runAutomationNow(automation.id)}
-                          className="rounded-lg bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-800"
-                        >
-                          Spustit ted
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {automations.map((automation) => (
+              <div key={automation.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">{automation.name}</h3>
+                    <p className="mt-1 text-sm text-slate-600">{getAutomationSummary(automation)}</p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${automation.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
+                    {automation.enabled ? 'SEPNUTO' : 'NESEPNUTO'}
+                  </span>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
+                  <span className="rounded-full bg-white px-3 py-1">Rezim: {automation.mode === 'auto' ? 'Automaticky' : 'Rucne'}</span>
+                  <span className="rounded-full bg-white px-3 py-1">Zdroj: {automation.source}</span>
+                  <span className="rounded-full bg-white px-3 py-1">Posledni beh: {automation.lastRun}</span>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => toggleAutomation(automation.id)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700">
+                    {automation.enabled ? 'Vypnout' : 'Zapnout'}
+                  </button>
+                  <button type="button" onClick={() => switchAutomationMode(automation.id)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                    Prepnout rezim
+                  </button>
+                  <button type="button" onClick={() => runAutomationNow(automation.id)} className="rounded-lg bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-800">
+                    Spustit ted
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -629,15 +803,7 @@ export const DashboardPage = () => {
               <p className="mb-2 text-sm font-medium text-gray-600">Metrika</p>
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(METRIC_CONFIG) as ChartMetric[]).map((metric) => (
-                  <button
-                    key={metric}
-                    onClick={() => setSelectedMetric(metric)}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      selectedMetric === metric
-                        ? 'bg-cyan-700 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
+                  <button key={metric} onClick={() => setSelectedMetric(metric)} className={`rounded-lg px-3 py-2 text-sm font-medium transition ${selectedMetric === metric ? 'bg-cyan-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                     {METRIC_CONFIG[metric].label}
                   </button>
                 ))}
@@ -648,15 +814,7 @@ export const DashboardPage = () => {
               <p className="mb-2 text-sm font-medium text-gray-600">Typ grafu</p>
               <div className="flex gap-2">
                 {(['line', 'bar'] as ChartStyle[]).map((style) => (
-                  <button
-                    key={style}
-                    onClick={() => setChartStyle(style)}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium uppercase transition ${
-                      chartStyle === style
-                        ? 'bg-cyan-700 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
+                  <button key={style} onClick={() => setChartStyle(style)} className={`rounded-lg px-3 py-2 text-sm font-medium uppercase transition ${chartStyle === style ? 'bg-cyan-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                     {style}
                   </button>
                 ))}
@@ -667,15 +825,7 @@ export const DashboardPage = () => {
               <p className="mb-2 text-sm font-medium text-gray-600">Casove okno</p>
               <div className="flex gap-2">
                 {TIME_RANGE_OPTIONS.map((option) => (
-                  <button
-                    key={option.label}
-                    onClick={() => setTimeRange(option.value)}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      timeRange === option.value
-                        ? 'bg-cyan-700 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
+                  <button key={option.label} onClick={() => setTimeRange(option.value)} className={`rounded-lg px-3 py-2 text-sm font-medium transition ${timeRange === option.value ? 'bg-cyan-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                     {option.label}
                   </button>
                 ))}
@@ -684,33 +834,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <Chart
-          title={`${selectedMetricConfig.title} (poslednich ${selectedTimeRangeLabel})`}
-          data={chartData}
-          type={chartStyle}
-          dataKey={selectedMetric}
-          color={selectedMetricConfig.color}
-          unit={selectedMetricConfig.unit}
-          height={380}
-        />
-
-        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">Stav systemu</h2>
-          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
-            <div className="rounded-lg bg-gray-50 p-4">
-              <p className="text-gray-500">Stav menice</p>
-              <p className="mt-1 font-semibold text-gray-900">{store.isOnline ? 'Online' : 'Offline'}</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-4">
-              <p className="text-gray-500">Ucinnost</p>
-              <p className="mt-1 font-semibold text-gray-900">{Number(data.efficiency).toFixed(1)}%</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 p-4">
-              <p className="text-gray-500">Napeti</p>
-              <p className="mt-1 font-semibold text-gray-900">{Math.round(data.voltage)}V</p>
-            </div>
-          </div>
-        </div>
+        <Chart title={`${selectedMetricConfig.title} (poslednich ${selectedTimeRangeLabel})`} data={chartData} type={chartStyle} dataKey={selectedMetric} color={selectedMetricConfig.color} unit={selectedMetricConfig.unit} height={380} />
 
         {openedMetricHelp && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/50 p-4">
@@ -720,11 +844,7 @@ export const DashboardPage = () => {
                   <h3 className="text-lg font-semibold text-slate-900">{METRIC_HELP[openedMetricHelp].label}</h3>
                   <p className="text-sm text-slate-500">Jednotka: {METRIC_HELP[openedMetricHelp].unit}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setOpenedMetricHelp(null)}
-                  className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-200"
-                >
+                <button type="button" onClick={() => setOpenedMetricHelp(null)} className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-200">
                   Zavrit
                 </button>
               </div>

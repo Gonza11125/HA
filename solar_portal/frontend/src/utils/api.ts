@@ -1,15 +1,35 @@
 import axios from 'axios'
 
-// Use dynamic API URL based on current hostname (for Home Assistant add-on)
-const getApiBaseUrl = () => {
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname
-    return `http://${hostname}:5000/api`
+const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '')
+
+const getRuntimeApiBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    return 'http://localhost:5000/api'
   }
-  return 'http://localhost:5000/api'
+
+  const host = window.location.hostname || 'localhost'
+  return `http://${host}:5000/api`
 }
 
-const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || getApiBaseUrl()
+const getApiBaseUrl = () => {
+  const envValue = String((import.meta as any).env.VITE_API_BASE_URL || '').trim()
+  if (!envValue) {
+    return getRuntimeApiBaseUrl()
+  }
+
+  if (envValue.startsWith(':')) {
+    if (typeof window === 'undefined') {
+      return trimTrailingSlash(`http://localhost${envValue}`)
+    }
+
+    const host = window.location.hostname || 'localhost'
+    return trimTrailingSlash(`http://${host}${envValue}`)
+  }
+
+  return trimTrailingSlash(envValue)
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
