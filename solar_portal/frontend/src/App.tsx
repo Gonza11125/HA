@@ -5,7 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 // Pages
 import { LoginPage } from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
-import { DashboardPage } from './pages/DashboardPage'
+import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import AdminPage from './pages/AdminPage'
 
