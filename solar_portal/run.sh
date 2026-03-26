@@ -8,7 +8,16 @@ echo "[INFO] ========================================="
 # Initialize and start PostgreSQL
 echo "[INFO] Initializing PostgreSQL database..."
 mkdir -p /data/postgres
-chown postgres:postgres /data/postgres
+chown -R postgres:postgres /data/postgres || true
+chmod 700 /data/postgres || true
+
+# If existing database files are not readable by postgres, fail with clear guidance.
+if [ -f "/data/postgres/global/pg_control" ] && ! su postgres -c "test -r /data/postgres/global/pg_control"; then
+    echo "[ERROR] Existing PostgreSQL data at /data/postgres is not readable by user 'postgres'."
+    echo "[ERROR] Fix add-on data folder permissions or remove /data/postgres to reinitialize database."
+    ls -la /data/postgres || true
+    exit 1
+fi
 
 # Initialize database if not exists
 if [ ! -d "/data/postgres/base" ]; then
@@ -23,7 +32,17 @@ echo "[INFO] PostgreSQL started with PID $POSTGRES_PID"
 
 # Wait for PostgreSQL to be ready
 echo "[INFO] Waiting for PostgreSQL to be ready..."
-sleep 5
+for i in $(seq 1 20); do
+    if su postgres -c "pg_isready -q"; then
+        break
+    fi
+    sleep 1
+done
+
+if ! su postgres -c "pg_isready -q"; then
+    echo "[ERROR] PostgreSQL failed to start. Check permissions in /data/postgres."
+    exit 1
+fi
 
 # Create database if not exists
 su postgres -c "psql -lqt" | cut -d \| -f 1 | grep -qw solar_portal || su postgres -c "createdb solar_portal"
