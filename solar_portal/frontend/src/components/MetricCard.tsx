@@ -4,6 +4,8 @@ interface MetricCardProps {
   unit?: string
   icon: string
   trend?: number
+  trendText?: string
+  trendEpsilon?: number
   subtitle?: string
   color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple'
   onClick?: () => void
@@ -15,6 +17,8 @@ export const MetricCard = ({
   unit = '',
   icon,
   trend,
+  trendText,
+  trendEpsilon = 0.01,
   subtitle,
   onClick,
   color = 'blue'
@@ -35,6 +39,28 @@ export const MetricCard = ({
     purple: 'text-purple-600'
   }
 
+  const trendState =
+    trend === undefined
+      ? null
+      : Math.abs(trend) <= trendEpsilon
+        ? 'flat'
+        : trend > 0
+          ? 'up'
+          : 'down'
+
+  const trendMeta = {
+    up: { symbol: '↑', className: 'text-emerald-600' },
+    down: { symbol: '↓', className: 'text-rose-600' },
+    flat: { symbol: '—', className: 'text-amber-600' },
+  } as const
+
+  const defaultTrendText =
+    trend === undefined
+      ? ''
+      : trendState === 'flat'
+        ? 'Stagnuje oproti minulemu bodu'
+        : `${Math.abs(trend).toFixed(2)} oproti minulemu bodu`
+
   return (
     <button
       type="button"
@@ -52,9 +78,9 @@ export const MetricCard = ({
             {unit && <span className="text-gray-600 text-sm">{unit}</span>}
           </div>
           {subtitle && <p className="mt-2 text-xs text-gray-500">{subtitle}</p>}
-          {trend !== undefined && (
-            <p className={`text-sm mt-2 ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)} % oproti minulé hodině
+          {trend !== undefined && trendState && (
+            <p className={`text-sm mt-2 ${trendMeta[trendState].className}`}>
+              {trendMeta[trendState].symbol} {trendText || defaultTrendText}
             </p>
           )}
         </div>

@@ -68,6 +68,7 @@ const defaults = {
     entity_battery_voltage: 'sensor.alpha_ess_battery_voltage',
     entity_grid_import: '',
     entity_grid_export: '',
+    entity_home_consumption: '',
     entity_solar_production: 'sensor.solar_energy_today_2'
 }
 
@@ -141,6 +142,11 @@ if (gridImport) {
 const gridExport = String(options.entity_grid_export || defaults.entity_grid_export).trim()
 if (gridExport) {
     entityMappings.push({ type: 'grid_export', entityId: gridExport, friendlyName: 'Grid Export', unit: 'kWh' })
+}
+
+const homeConsumption = String(options.entity_home_consumption || defaults.entity_home_consumption).trim()
+if (homeConsumption) {
+    entityMappings.push({ type: 'home_consumption', entityId: homeConsumption, friendlyName: 'Home Consumption', unit: 'kWh' })
 }
 
 const solarProduction = String(options.entity_solar_production || defaults.entity_solar_production).trim()

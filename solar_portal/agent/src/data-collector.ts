@@ -37,6 +37,12 @@ interface AgentConfigInput {
   sensors?: string[]
 }
 
+interface DailyEnergyTracker {
+  dayKey: string
+  baseline: number
+  lastValue: number
+}
+
 const ENERGY_METRIC_TYPES = new Set([
   'energy_today',
   'solar_production',
@@ -54,6 +60,7 @@ export class DataCollector {
   private cloudClient: CloudClient
   private pollingInterval: NodeJS.Timeout | null = null
   private configFile: string
+  private dailyEnergyTrackers: Record<string, DailyEnergyTracker> = {}
 
   constructor(configPath: string) {
     this.configFile = configPath
@@ -165,6 +172,68 @@ export class DataCollector {
     return value
   }
 
+  private getLocalDayKey(date: Date): string {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  private isTotalEnergySensor(mapping: EntityMapping, state: { attributes?: Record<string, unknown> }): boolean {
+    if (!ENERGY_METRIC_TYPES.has(mapping.type)) {
+      return false
+    }
+
+    const stateClassRaw = state.attributes?.state_class
+    const stateClass = typeof stateClassRaw === 'string' ? stateClassRaw.toLowerCase().trim() : ''
+    if (stateClass === 'total' || stateClass === 'total_increasing') {
+      return true
+    }
+
+    const lastReset = state.attributes?.last_reset
+    if (lastReset !== undefined && lastReset !== null) {
+      return true
+    }
+
+    return false
+  }
+
+  private toDailyEnergy(entityId: string, value: number): number {
+    const dayKey = this.getLocalDayKey(new Date())
+    const tracker = this.dailyEnergyTrackers[entityId]
+
+    if (!tracker) {
+      this.dailyEnergyTrackers[entityId] = {
+        dayKey,
+        baseline: value,
+        lastValue: value,
+      }
+      return 0
+    }
+
+    if (tracker.dayKey !== dayKey) {
+      this.dailyEnergyTrackers[entityId] = {
+        dayKey,
+        baseline: value,
+        lastValue: value,
+      }
+      return 0
+    }
+
+    // Total counters can reset after inverter/HA restart.
+    if (value < tracker.baseline || value < tracker.lastValue) {
+      this.dailyEnergyTrackers[entityId] = {
+        dayKey,
+        baseline: value,
+        lastValue: value,
+      }
+      return 0
+    }
+
+    tracker.lastValue = value
+    return Math.max(value - tracker.baseline, 0)
+  }
+
   private loadConfig(): AgentConfig {
     try {
       const configData = fs.readFileSync(this.configFile, 'utf-8')
@@ -265,8 +334,12 @@ export class DataCollector {
             }
 
             const normalizedValue = this.normalizeMetricValue(mapping, state, parsedValue)
-            metrics[mapping.type] = normalizedValue
-            logger.debug(`Collected ${mapping.type}: ${normalizedValue}`)
+            const dailyNormalizedValue = this.isTotalEnergySensor(mapping, state)
+              ? this.toDailyEnergy(mapping.entityId, normalizedValue)
+              : normalizedValue
+
+            metrics[mapping.type] = dailyNormalizedValue
+            logger.debug(`Collected ${mapping.type}: ${dailyNormalizedValue}`)
           } catch (error) {
             logger.warn(`Failed to parse value for ${mapping.entityId}`)
             allSuccess = false

@@ -53,6 +53,15 @@ interface DiagnosticsItem {
   tone: 'good' | 'warn' | 'neutral'
 }
 
+type TrendState = 'up' | 'down' | 'flat'
+
+interface TrendInfo {
+  state: TrendState
+  icon: string
+  toneClass: string
+  text: string
+}
+
 const METRIC_CONFIG: Record<ChartMetric, MetricConfig> = {
   power: { label: 'Vykon', title: 'Aktualni vykon', unit: 'W', color: '#f59e0b' },
   energy: { label: 'Energie', title: 'Vyroba dnes', unit: 'kWh', color: '#10b981' },
@@ -213,6 +222,28 @@ const normalizeDailyEnergyKwh = (value: number) => {
   }
   // Values are normalized by the agent/backend to kWh.
   return value
+}
+
+const resolveTrendState = (delta: number, epsilon: number): TrendState => {
+  if (!Number.isFinite(delta) || Math.abs(delta) <= epsilon) {
+    return 'flat'
+  }
+  return delta > 0 ? 'up' : 'down'
+}
+
+const buildTrendInfo = (
+  delta: number,
+  epsilon: number,
+  labels: { up: string; down: string; flat: string },
+): TrendInfo => {
+  const state = resolveTrendState(delta, epsilon)
+  if (state === 'up') {
+    return { state, icon: '↑', toneClass: 'text-emerald-700', text: labels.up }
+  }
+  if (state === 'down') {
+    return { state, icon: '↓', toneClass: 'text-rose-700', text: labels.down }
+  }
+  return { state, icon: '—', toneClass: 'text-amber-700', text: labels.flat }
 }
 
 export const DashboardPage = () => {
@@ -417,6 +448,115 @@ export const DashboardPage = () => {
 
     return Math.max(normalizedSolarProduction - selfConsumptionEnergy, 0)
   }, [data.hasGridExport, normalizedGridExport, normalizedSolarProduction, selfConsumptionEnergy])
+
+  const trendDelta = useMemo(() => {
+    if (chartData.length < 2) {
+      return {
+        battery: 0,
+        power: 0,
+        solarProduction: 0,
+        gridImport: 0,
+        homeUsage: 0,
+        exportEnergy: 0,
+      }
+    }
+
+    const latest = chartData[chartData.length - 1]
+    const prev = chartData[chartData.length - 2]
+    const estimateHomeUsageAtPoint = (point: {
+      homeConsumption: number
+      solarProduction: number
+      gridExport: number
+      gridImport: number
+      selfConsumptionPercent: number
+    }) => {
+      if (Boolean(data.hasHomeConsumption)) {
+        return point.homeConsumption
+      }
+
+      if (Boolean(data.hasGridExport)) {
+        return Math.max(point.solarProduction - point.gridExport + point.gridImport, 0)
+      }
+
+      return point.solarProduction * (point.selfConsumptionPercent / 100) + point.gridImport
+    }
+
+    const estimateExportAtPoint = (point: {
+      solarProduction: number
+      gridExport: number
+      selfConsumptionPercent: number
+    }) => {
+      if (Boolean(data.hasGridExport)) {
+        return point.gridExport
+      }
+
+      return Math.max(point.solarProduction - point.solarProduction * (point.selfConsumptionPercent / 100), 0)
+    }
+
+    return {
+      battery: Number(latest.battery) - Number(prev.battery),
+      power: Number(latest.power) - Number(prev.power),
+      solarProduction: Number(latest.solarProduction) - Number(prev.solarProduction),
+      gridImport: Number(latest.gridImport) - Number(prev.gridImport),
+      homeUsage: estimateHomeUsageAtPoint(latest) - estimateHomeUsageAtPoint(prev),
+      exportEnergy: estimateExportAtPoint(latest) - estimateExportAtPoint(prev),
+    }
+  }, [chartData, data.hasGridExport, data.hasHomeConsumption])
+
+  const batteryTrend = useMemo(
+    () =>
+      buildTrendInfo(trendDelta.battery, 0.1, {
+        up: 'Baterie se nabiji',
+        down: 'Baterie se vybiji',
+        flat: 'Baterie stagnuje',
+      }),
+    [trendDelta.battery],
+  )
+  const powerTrend = useMemo(
+    () =>
+      buildTrendInfo(trendDelta.power, 25, {
+        up: 'Vykon roste',
+        down: 'Vykon klesa',
+        flat: 'Vykon stagnuje',
+      }),
+    [trendDelta.power],
+  )
+  const solarTrend = useMemo(
+    () =>
+      buildTrendInfo(trendDelta.solarProduction, 0.01, {
+        up: 'Vyroba panelu roste',
+        down: 'Vyroba panelu klesa',
+        flat: 'Vyroba panelu stagnuje',
+      }),
+    [trendDelta.solarProduction],
+  )
+  const homeUsageTrend = useMemo(
+    () =>
+      buildTrendInfo(trendDelta.homeUsage, 0.01, {
+        up: 'Spotreba domu roste',
+        down: 'Spotreba domu klesa',
+        flat: 'Spotreba domu stagnuje',
+      }),
+    [trendDelta.homeUsage],
+  )
+  const gridImportTrend = useMemo(
+    () =>
+      buildTrendInfo(trendDelta.gridImport, 0.01, {
+        up: 'Odber ze site roste',
+        down: 'Odber ze site klesa',
+        flat: 'Odber ze site stagnuje',
+      }),
+    [trendDelta.gridImport],
+  )
+  const exportTrend = useMemo(
+    () =>
+      buildTrendInfo(trendDelta.exportEnergy, 0.01, {
+        up: 'Prebytky rostou',
+        down: 'Prebytky klesaji',
+        flat: 'Prebytky stagnuji',
+      }),
+    [trendDelta.exportEnergy],
+  )
 
   const summaryHeadline = useMemo(() => {
     if (!store.isOnline) {
@@ -694,11 +834,55 @@ export const DashboardPage = () => {
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <MetricCard title="Aktualni vykon" value={Math.round(data.power)} unit="W" icon="⚡" color="yellow" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('power')} />
+          <MetricCard
+            title="Aktualni vykon"
+            value={Math.round(data.power)}
+            unit="W"
+            icon="⚡"
+            color="yellow"
+            subtitle="Kliknete pro popis veliciny"
+            trend={trendDelta.power}
+            trendEpsilon={25}
+            trendText={powerTrend.text}
+            onClick={() => setOpenedMetricHelp('power')}
+          />
           <MetricCard title="Energie dnes" value={normalizedEnergy.toFixed(1)} unit="kWh" icon="📈" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('energy')} />
-          <MetricCard title="Stav baterie" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('battery')} />
-          <MetricCard title="Vyrobena energie" value={normalizedSolarProduction.toFixed(2)} unit="kWh" icon="☀️" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('solarProduction')} />
-          <MetricCard title="Nakoupena energie" value={normalizedGridImport.toFixed(2)} unit="kWh" icon="🏭" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('gridImport')} />
+          <MetricCard
+            title="Stav baterie"
+            value={Math.round(data.battery)}
+            unit="%"
+            icon="🔋"
+            color="blue"
+            subtitle="Kliknete pro popis veliciny"
+            trend={trendDelta.battery}
+            trendEpsilon={0.1}
+            trendText={batteryTrend.text}
+            onClick={() => setOpenedMetricHelp('battery')}
+          />
+          <MetricCard
+            title="Vyrobena energie"
+            value={normalizedSolarProduction.toFixed(2)}
+            unit="kWh"
+            icon="☀️"
+            color="green"
+            subtitle="Kliknete pro popis veliciny"
+            trend={trendDelta.solarProduction}
+            trendEpsilon={0.01}
+            trendText={solarTrend.text}
+            onClick={() => setOpenedMetricHelp('solarProduction')}
+          />
+          <MetricCard
+            title="Nakoupena energie"
+            value={normalizedGridImport.toFixed(2)}
+            unit="kWh"
+            icon="🏭"
+            color="red"
+            subtitle="Kliknete pro popis veliciny"
+            trend={trendDelta.gridImport}
+            trendEpsilon={0.01}
+            trendText={gridImportTrend.text}
+            onClick={() => setOpenedMetricHelp('gridImport')}
+          />
           <MetricCard title="Vyuziti FVE" value={Math.round(data.selfConsumptionPercent)} unit="%" icon="♻️" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('selfConsumptionPercent')} />
           <MetricCard title="Teplota" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('temperature')} />
         </div>
@@ -718,6 +902,7 @@ export const DashboardPage = () => {
                 <p className="text-xs uppercase tracking-wide text-emerald-700">Panely</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{normalizedSolarProduction.toFixed(2)} kWh</p>
                 <p className="mt-1 text-xs text-slate-600">Celkem vyrobeno fotovoltaikou.</p>
+                <p className={`mt-2 text-xs font-semibold ${solarTrend.toneClass}`}>{solarTrend.icon} {solarTrend.text}</p>
               </div>
               <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-cyan-700">Dum</p>
@@ -729,11 +914,13 @@ export const DashboardPage = () => {
                       ? 'Vypocet z vyroby, importu a exportu.'
                       : 'Odhad energie vyuzite doma dnes.'}
                 </p>
+                <p className={`mt-2 text-xs font-semibold ${homeUsageTrend.toneClass}`}>{homeUsageTrend.icon} {homeUsageTrend.text}</p>
               </div>
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-amber-700">Baterie</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{Math.round(data.battery)} %</p>
                 <p className="mt-1 text-xs text-slate-600">Aktualni ulozena rezerva energie.</p>
+                <p className={`mt-2 text-xs font-semibold ${batteryTrend.toneClass}`}>{batteryTrend.icon} {batteryTrend.text}</p>
               </div>
               <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-rose-700">Sit a prebytky</p>
@@ -741,6 +928,8 @@ export const DashboardPage = () => {
                 <p className="mt-1 text-xs text-slate-600">
                   Prvni cislo je odber ze site, druhe {data.hasGridExport ? 'mereny' : 'odhad'} prebytek.
                 </p>
+                <p className={`mt-2 text-xs font-semibold ${gridImportTrend.toneClass}`}>{gridImportTrend.icon} {gridImportTrend.text}</p>
+                <p className={`mt-1 text-xs font-semibold ${exportTrend.toneClass}`}>{exportTrend.icon} {exportTrend.text}</p>
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 {
   "name": "Solar Portal",
-  "version": "0.3.14",
+  "version": "0.3.15",
   "slug": "solar_portal",
   "description": "Solar energy monitoring portal with Home Assistant integration",
   "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"],
@@ -30,6 +30,7 @@
     "entity_battery_voltage": "sensor.alpha_ess_battery_voltage",
     "entity_grid_import": "",
     "entity_grid_export": "",
+    "entity_home_consumption": "",
     "entity_solar_production": "sensor.solar_energy_today_2"
   },
   "schema": {
@@ -48,6 +49,7 @@
     "entity_battery_voltage": "str?",
     "entity_grid_import": "str?",
     "entity_grid_export": "str?",
+    "entity_home_consumption": "str?",
     "entity_solar_production": "str?"
   },
   "environment": {
