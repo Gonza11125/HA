@@ -12,6 +12,7 @@ interface LiveData {
   gridImport: number
   gridExport: number
   solarProduction: number
+  solarProductionTotal: number
   homeConsumption: number
   selfConsumptionPercent: number
   hasGridImport: boolean
@@ -28,6 +29,7 @@ interface HistoryPoint {
   gridImport: number
   gridExport: number
   solarProduction: number
+  solarProductionTotal: number
   homeConsumption: number
   selfConsumptionPercent: number
 }
@@ -53,6 +55,7 @@ let liveData: LiveData = {
   gridImport: 0,
   gridExport: 0,
   solarProduction: 0,
+  solarProductionTotal: 0,
   homeConsumption: 0,
   selfConsumptionPercent: 0,
   hasGridImport: false,
@@ -101,6 +104,10 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
   const gridImport = toNumber(metrics.grid_import ?? metrics.grid_energy_import ?? metrics.energy_import, liveData.gridImport)
   const gridExport = toNumber(metrics.grid_export ?? metrics.grid_energy_export ?? metrics.energy_export, liveData.gridExport)
   const solarProduction = toNumber(metrics.solar_production ?? metrics.solar_energy ?? metrics.pv_energy, liveData.solarProduction)
+  const solarProductionTotal = toNumber(
+    metrics.solar_production_total ?? metrics.solar_energy_total ?? metrics.pv_energy_total,
+    liveData.solarProductionTotal,
+  )
   const homeConsumption = toNumber(
     metrics.home_consumption ?? metrics.home_energy ?? metrics.house_consumption ?? metrics.load_energy,
     liveData.homeConsumption,
@@ -131,6 +138,7 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
     gridImport,
     gridExport,
     solarProduction,
+    solarProductionTotal,
     homeConsumption,
     selfConsumptionPercent,
     hasGridImport,
@@ -147,6 +155,7 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
     gridImport,
     gridExport,
     solarProduction,
+    solarProductionTotal,
     homeConsumption,
     selfConsumptionPercent,
   })

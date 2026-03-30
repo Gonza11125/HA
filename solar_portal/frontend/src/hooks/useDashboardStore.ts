@@ -22,6 +22,7 @@ export interface DashboardData {
   gridImport: number
   gridExport: number
   solarProduction: number
+  solarProductionTotal: number
   homeConsumption: number
   selfConsumptionPercent: number
   hasGridImport: boolean

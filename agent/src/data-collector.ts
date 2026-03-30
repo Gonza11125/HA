@@ -399,16 +399,18 @@ export class DataCollector {
             }
 
             const normalizedValue = this.normalizeMetricValue(mapping, state, parsedValue)
-            let dailyNormalizedValue = this.isTotalEnergySensor(mapping, state)
-              ? this.toDailyEnergy(mapping.entityId, normalizedValue)
-              : normalizedValue
+            const useDailyDelta = this.isTotalEnergySensor(mapping, state)
+            let dailyNormalizedValue = useDailyDelta ? this.toDailyEnergy(mapping.entityId, normalizedValue) : normalizedValue
 
             // Keep solar production non-zero when a dedicated daily sensor is available.
-            if (mapping.type === 'solar_production' && dailyNormalizedValue <= 0) {
+            if (mapping.type === 'solar_production') {
               const energyToday = Number(metrics.energy_today)
-              if (Number.isFinite(energyToday) && energyToday > 0) {
+              if (Number.isFinite(energyToday) && energyToday > 0 && (dailyNormalizedValue <= 0 || (useDailyDelta && dailyNormalizedValue < energyToday * 0.5))) {
                 dailyNormalizedValue = energyToday
               }
+
+              // Keep cumulative production available for lifetime KPI.
+              metrics.solar_production_total = normalizedValue
             }
 
             metrics[mapping.type] = dailyNormalizedValue

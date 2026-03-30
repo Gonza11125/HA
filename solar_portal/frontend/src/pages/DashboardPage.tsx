@@ -365,6 +365,7 @@ export const DashboardPage = () => {
     gridImport: 0,
     gridExport: 0,
     solarProduction: 0,
+    solarProductionTotal: 0,
     homeConsumption: 0,
     selfConsumptionPercent: 0,
     hasGridImport: false,
@@ -384,6 +385,7 @@ export const DashboardPage = () => {
         gridImport: 0,
         gridExport: 0,
         solarProduction: 0,
+        solarProductionTotal: 0,
         homeConsumption: 0,
         selfConsumptionPercent: 0,
         hasGridImport: false,
@@ -393,6 +395,7 @@ export const DashboardPage = () => {
 
   const normalizedEnergy = useMemo(() => normalizeDailyEnergyKwh(Number(data.energy)), [data.energy])
   const normalizedSolarProduction = useMemo(() => normalizeDailyEnergyKwh(Number(data.solarProduction)), [data.solarProduction])
+  const normalizedSolarProductionTotal = useMemo(() => normalizeDailyEnergyKwh(Number(data.solarProductionTotal)), [data.solarProductionTotal])
   const normalizedGridImport = useMemo(() => normalizeDailyEnergyKwh(Number(data.gridImport)), [data.gridImport])
   const normalizedGridExport = useMemo(() => normalizeDailyEnergyKwh(Number(data.gridExport)), [data.gridExport])
   const normalizedHomeConsumption = useMemo(() => normalizeDailyEnergyKwh(Number(data.homeConsumption)), [data.homeConsumption])
@@ -870,6 +873,14 @@ export const DashboardPage = () => {
             trendEpsilon={0.01}
             trendText={solarTrend.text}
             onClick={() => setOpenedMetricHelp('solarProduction')}
+          />
+          <MetricCard
+            title="Vyroba FVE celkem"
+            value={normalizedSolarProductionTotal.toFixed(2)}
+            unit="kWh"
+            icon="🔆"
+            color="green"
+            subtitle="Celkova vyroba od zacatku provozu"
           />
           <MetricCard
             title="Nakoupena energie"

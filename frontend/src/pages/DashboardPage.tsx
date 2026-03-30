@@ -334,6 +334,7 @@ export const DashboardPage = () => {
     gridImport: 0,
     gridExport: 0,
     solarProduction: 0,
+    solarProductionTotal: 0,
     homeConsumption: 0,
     selfConsumptionPercent: 0,
     hasGridImport: false,
@@ -353,6 +354,7 @@ export const DashboardPage = () => {
         gridImport: 0,
         gridExport: 0,
         solarProduction: 0,
+        solarProductionTotal: 0,
         homeConsumption: 0,
         selfConsumptionPercent: 0,
         hasGridImport: false,
@@ -362,6 +364,7 @@ export const DashboardPage = () => {
 
   const normalizedEnergy = useMemo(() => normalizeDailyEnergyKwh(Number(data.energy)), [data.energy])
   const normalizedSolarProduction = useMemo(() => normalizeDailyEnergyKwh(Number(data.solarProduction)), [data.solarProduction])
+  const normalizedSolarProductionTotal = useMemo(() => normalizeDailyEnergyKwh(Number(data.solarProductionTotal)), [data.solarProductionTotal])
   const normalizedGridImport = useMemo(() => normalizeDailyEnergyKwh(Number(data.gridImport)), [data.gridImport])
   const normalizedGridExport = useMemo(() => normalizeDailyEnergyKwh(Number(data.gridExport)), [data.gridExport])
   const normalizedHomeConsumption = useMemo(() => normalizeDailyEnergyKwh(Number(data.homeConsumption)), [data.homeConsumption])
@@ -698,6 +701,7 @@ export const DashboardPage = () => {
           <MetricCard title="Energie dnes" value={normalizedEnergy.toFixed(1)} unit="kWh" icon="📈" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('energy')} />
           <MetricCard title="Stav baterie" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('battery')} />
           <MetricCard title="Vyroba FVE dnes" value={normalizedSolarProduction.toFixed(2)} unit="kWh" icon="☀️" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('solarProduction')} />
+          <MetricCard title="Vyroba FVE celkem" value={normalizedSolarProductionTotal.toFixed(2)} unit="kWh" icon="🔆" color="green" subtitle="Celkova vyroba od zacatku provozu" />
           <MetricCard title="Nakoupena energie" value={normalizedGridImport.toFixed(2)} unit="kWh" icon="🏭" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('gridImport')} />
           <MetricCard title="Vyuziti FVE" value={Math.round(data.selfConsumptionPercent)} unit="%" icon="♻️" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('selfConsumptionPercent')} />
           <MetricCard title="Teplota" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('temperature')} />
