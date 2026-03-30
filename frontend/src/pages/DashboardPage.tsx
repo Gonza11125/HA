@@ -58,7 +58,7 @@ const METRIC_CONFIG: Record<ChartMetric, MetricConfig> = {
   energy: { label: 'Energie', title: 'Vyroba dnes', unit: 'kWh', color: '#10b981' },
   battery: { label: 'Baterie', title: 'Stav baterie', unit: '%', color: '#2563eb' },
   gridImport: { label: 'Sit', title: 'Odber ze site', unit: 'kWh', color: '#ef4444' },
-  solarProduction: { label: 'FVE', title: 'Vyrobena energie', unit: 'kWh', color: '#22c55e' },
+  solarProduction: { label: 'FVE', title: 'Vyroba FVE dnes', unit: 'kWh', color: '#22c55e' },
   selfConsumptionPercent: { label: 'Sobestacnost', title: 'Vyuziti FVE', unit: '%', color: '#06b6d4' },
 }
 
@@ -85,10 +85,10 @@ const METRIC_HELP: Record<DashboardMetric, MetricHelp> = {
     updateInterval: 'Kazdych 5 az 10 sekund.',
   },
   solarProduction: {
-    label: 'Vyrobena energie',
+    label: 'Vyroba FVE dnes',
     unit: 'kWh',
-    description: 'Celkovy objem energie vyrobeny fotovoltaikou.',
-    interpretation: 'Pomaha porovnat produktivitu mezi dny a tydny.',
+    description: 'Souhrn energie vyrobene fotovoltaikou od pulnoci do teto chvile.',
+    interpretation: 'Hodnota behem dne roste a vecer se ustali.',
     updateInterval: 'Prubezne behem dne.',
   },
   gridImport: {
@@ -697,7 +697,7 @@ export const DashboardPage = () => {
           <MetricCard title="Aktualni vykon" value={Math.round(data.power)} unit="W" icon="⚡" color="yellow" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('power')} />
           <MetricCard title="Energie dnes" value={normalizedEnergy.toFixed(1)} unit="kWh" icon="📈" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('energy')} />
           <MetricCard title="Stav baterie" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('battery')} />
-          <MetricCard title="Vyrobena energie" value={normalizedSolarProduction.toFixed(2)} unit="kWh" icon="☀️" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('solarProduction')} />
+          <MetricCard title="Vyroba FVE dnes" value={normalizedSolarProduction.toFixed(2)} unit="kWh" icon="☀️" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('solarProduction')} />
           <MetricCard title="Nakoupena energie" value={normalizedGridImport.toFixed(2)} unit="kWh" icon="🏭" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('gridImport')} />
           <MetricCard title="Vyuziti FVE" value={Math.round(data.selfConsumptionPercent)} unit="%" icon="♻️" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('selfConsumptionPercent')} />
           <MetricCard title="Teplota" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('temperature')} />
@@ -717,7 +717,7 @@ export const DashboardPage = () => {
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-emerald-700">Panely</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{normalizedSolarProduction.toFixed(2)} kWh</p>
-                <p className="mt-1 text-xs text-slate-600">Celkem vyrobeno fotovoltaikou.</p>
+                <p className="mt-1 text-xs text-slate-600">Vyrobeno fotovoltaikou dnes.</p>
               </div>
               <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-cyan-700">Dum</p>

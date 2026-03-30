@@ -61,12 +61,61 @@ export class DataCollector {
   private pollingInterval: NodeJS.Timeout | null = null
   private configFile: string
   private dailyEnergyTrackers: Record<string, DailyEnergyTracker> = {}
+  private dailyTrackersFile: string
+  private dailyTrackersDirty = false
 
   constructor(configPath: string) {
     this.configFile = configPath
+    this.dailyTrackersFile = `${configPath}.daily-trackers.json`
+    this.loadDailyEnergyTrackers()
     this.config = this.loadConfig()
     this.haClient = new HAClient(this.config.haUrl, this.config.haToken)
     this.cloudClient = new CloudClient(this.config.cloudUrl, this.config.deviceToken || '')
+  }
+
+  private loadDailyEnergyTrackers(): void {
+    try {
+      if (!fs.existsSync(this.dailyTrackersFile)) {
+        return
+      }
+
+      const raw = fs.readFileSync(this.dailyTrackersFile, 'utf-8')
+      const parsed = JSON.parse(raw) as Record<string, DailyEnergyTracker>
+      const normalized: Record<string, DailyEnergyTracker> = {}
+
+      for (const [entityId, tracker] of Object.entries(parsed)) {
+        if (!tracker || typeof tracker !== 'object') {
+          continue
+        }
+
+        const dayKey = typeof tracker.dayKey === 'string' ? tracker.dayKey : ''
+        const baseline = Number(tracker.baseline)
+        const lastValue = Number(tracker.lastValue)
+        if (!dayKey || !Number.isFinite(baseline) || !Number.isFinite(lastValue)) {
+          continue
+        }
+
+        normalized[entityId] = { dayKey, baseline, lastValue }
+      }
+
+      this.dailyEnergyTrackers = normalized
+    } catch (error) {
+      logger.warn('Failed to load persisted daily energy trackers')
+      this.dailyEnergyTrackers = {}
+    }
+  }
+
+  private saveDailyEnergyTrackers(): void {
+    if (!this.dailyTrackersDirty) {
+      return
+    }
+
+    try {
+      fs.writeFileSync(this.dailyTrackersFile, JSON.stringify(this.dailyEnergyTrackers, null, 2), 'utf-8')
+      this.dailyTrackersDirty = false
+    } catch (error) {
+      logger.warn('Failed to persist daily energy trackers')
+    }
   }
 
   private normalizeCloudUrl(inputUrl?: string): string {
@@ -185,6 +234,11 @@ export class DataCollector {
       return false
     }
 
+    const entityId = mapping.entityId.toLowerCase()
+    if (entityId.includes('today') || entityId.includes('daily')) {
+      return false
+    }
+
     if (!ENERGY_METRIC_TYPES.has(mapping.type)) {
       return false
     }
@@ -213,6 +267,7 @@ export class DataCollector {
         baseline: value,
         lastValue: value,
       }
+      this.dailyTrackersDirty = true
       return 0
     }
 
@@ -222,6 +277,7 @@ export class DataCollector {
         baseline: value,
         lastValue: value,
       }
+      this.dailyTrackersDirty = true
       return 0
     }
 
@@ -232,9 +288,13 @@ export class DataCollector {
         baseline: value,
         lastValue: value,
       }
+      this.dailyTrackersDirty = true
       return 0
     }
 
+    if (value !== tracker.lastValue) {
+      this.dailyTrackersDirty = true
+    }
     tracker.lastValue = value
     return Math.max(value - tracker.baseline, 0)
   }
@@ -366,6 +426,8 @@ export class DataCollector {
       if (!allSuccess) {
         logger.warn('Some metrics failed to collect')
       }
+
+      this.saveDailyEnergyTrackers()
 
       const payload: DataPayload = {
         timestamp: new Date().toISOString(),
