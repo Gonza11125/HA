@@ -180,6 +180,11 @@ export class DataCollector {
   }
 
   private isTotalEnergySensor(mapping: EntityMapping, state: { attributes?: Record<string, unknown> }): boolean {
+    // Explicit daily sensors are already day-scoped values; do not convert to delta.
+    if (mapping.type === 'energy_today') {
+      return false
+    }
+
     if (!ENERGY_METRIC_TYPES.has(mapping.type)) {
       return false
     }
@@ -334,9 +339,17 @@ export class DataCollector {
             }
 
             const normalizedValue = this.normalizeMetricValue(mapping, state, parsedValue)
-            const dailyNormalizedValue = this.isTotalEnergySensor(mapping, state)
+            let dailyNormalizedValue = this.isTotalEnergySensor(mapping, state)
               ? this.toDailyEnergy(mapping.entityId, normalizedValue)
               : normalizedValue
+
+            // Keep solar production non-zero when a dedicated daily sensor is available.
+            if (mapping.type === 'solar_production' && dailyNormalizedValue <= 0) {
+              const energyToday = Number(metrics.energy_today)
+              if (Number.isFinite(energyToday) && energyToday > 0) {
+                dailyNormalizedValue = energyToday
+              }
+            }
 
             metrics[mapping.type] = dailyNormalizedValue
             logger.debug(`Collected ${mapping.type}: ${dailyNormalizedValue}`)
