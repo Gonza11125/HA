@@ -211,12 +211,7 @@ const normalizeDailyEnergyKwh = (value: number) => {
   if (!Number.isFinite(value) || value < 0) {
     return 0
   }
-
-  // Some HA entities report daily energy in Wh; UI expects kWh.
-  if (value > 300) {
-    return value / 1000
-  }
-
+  // Values are normalized by the agent/backend to kWh.
   return value
 }
 
@@ -235,7 +230,9 @@ export const DashboardPage = () => {
       energy: number
       battery: number
       gridImport: number
+      gridExport: number
       solarProduction: number
+      homeConsumption: number
       selfConsumptionPercent: number
     }>
   >([])
@@ -335,8 +332,13 @@ export const DashboardPage = () => {
     efficiency: 0,
     voltage: 0,
     gridImport: 0,
+    gridExport: 0,
     solarProduction: 0,
+    homeConsumption: 0,
     selfConsumptionPercent: 0,
+    hasGridImport: false,
+    hasGridExport: false,
+    hasHomeConsumption: false,
   }
 
   const data = store.isOnline
@@ -349,13 +351,20 @@ export const DashboardPage = () => {
         efficiency: 0,
         voltage: 0,
         gridImport: 0,
+        gridExport: 0,
         solarProduction: 0,
+        homeConsumption: 0,
         selfConsumptionPercent: 0,
+        hasGridImport: false,
+        hasGridExport: false,
+        hasHomeConsumption: false,
       }
 
   const normalizedEnergy = useMemo(() => normalizeDailyEnergyKwh(Number(data.energy)), [data.energy])
   const normalizedSolarProduction = useMemo(() => normalizeDailyEnergyKwh(Number(data.solarProduction)), [data.solarProduction])
   const normalizedGridImport = useMemo(() => normalizeDailyEnergyKwh(Number(data.gridImport)), [data.gridImport])
+  const normalizedGridExport = useMemo(() => normalizeDailyEnergyKwh(Number(data.gridExport)), [data.gridExport])
+  const normalizedHomeConsumption = useMemo(() => normalizeDailyEnergyKwh(Number(data.homeConsumption)), [data.homeConsumption])
 
   const selectedMetricConfig = useMemo(() => METRIC_CONFIG[selectedMetric], [selectedMetric])
   const selectedTimeRangeLabel = useMemo(
@@ -368,7 +377,9 @@ export const DashboardPage = () => {
         ...point,
         energy: normalizeDailyEnergyKwh(Number(point.energy)),
         gridImport: normalizeDailyEnergyKwh(Number(point.gridImport)),
+        gridExport: normalizeDailyEnergyKwh(Number(point.gridExport)),
         solarProduction: normalizeDailyEnergyKwh(Number(point.solarProduction)),
+        homeConsumption: normalizeDailyEnergyKwh(Number(point.homeConsumption)),
         time: formatTimeLabel(point.timestamp, timeRange, point.time),
       })),
     [historyData, timeRange],
@@ -380,14 +391,32 @@ export const DashboardPage = () => {
     () => normalizedSolarProduction * (Number(data.selfConsumptionPercent) / 100),
     [data.selfConsumptionPercent, normalizedSolarProduction],
   )
-  const estimatedHomeUsage = useMemo(
-    () => selfConsumptionEnergy + normalizedGridImport,
-    [normalizedGridImport, selfConsumptionEnergy],
-  )
-  const estimatedExport = useMemo(
-    () => Math.max(normalizedSolarProduction - selfConsumptionEnergy, 0),
-    [normalizedSolarProduction, selfConsumptionEnergy],
-  )
+  const estimatedHomeUsage = useMemo(() => {
+    if (Boolean(data.hasHomeConsumption)) {
+      return normalizedHomeConsumption
+    }
+
+    if (Boolean(data.hasGridExport)) {
+      return Math.max(normalizedSolarProduction - normalizedGridExport + normalizedGridImport, 0)
+    }
+
+    return selfConsumptionEnergy + normalizedGridImport
+  }, [
+    data.hasGridExport,
+    data.hasHomeConsumption,
+    normalizedGridExport,
+    normalizedGridImport,
+    normalizedHomeConsumption,
+    normalizedSolarProduction,
+    selfConsumptionEnergy,
+  ])
+  const estimatedExport = useMemo(() => {
+    if (Boolean(data.hasGridExport)) {
+      return normalizedGridExport
+    }
+
+    return Math.max(normalizedSolarProduction - selfConsumptionEnergy, 0)
+  }, [data.hasGridExport, normalizedGridExport, normalizedSolarProduction, selfConsumptionEnergy])
 
   const summaryHeadline = useMemo(() => {
     if (!store.isOnline) {
@@ -693,7 +722,13 @@ export const DashboardPage = () => {
               <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-cyan-700">Dum</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{estimatedHomeUsage.toFixed(2)} kWh</p>
-                <p className="mt-1 text-xs text-slate-600">Odhad energie vyuzite doma dnes.</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  {data.hasHomeConsumption
+                    ? 'Priame mereni spotreby domu dnes.'
+                    : data.hasGridExport
+                      ? 'Vypocet z vyroby, importu a exportu.'
+                      : 'Odhad energie vyuzite doma dnes.'}
+                </p>
               </div>
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-amber-700">Baterie</p>
@@ -703,7 +738,9 @@ export const DashboardPage = () => {
               <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-rose-700">Sit a prebytky</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{normalizedGridImport.toFixed(2)} / {estimatedExport.toFixed(2)} kWh</p>
-                <p className="mt-1 text-xs text-slate-600">Prvni cislo je odber ze site, druhe odhad prebytku.</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Prvni cislo je odber ze site, druhe {data.hasGridExport ? 'mereny' : 'odhad'} prebytek.
+                </p>
               </div>
             </div>
           </div>

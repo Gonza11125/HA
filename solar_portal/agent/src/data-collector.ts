@@ -37,6 +37,17 @@ interface AgentConfigInput {
   sensors?: string[]
 }
 
+const ENERGY_METRIC_TYPES = new Set([
+  'energy_today',
+  'solar_production',
+  'grid_import',
+  'grid_export',
+  'home_consumption',
+  'energy_import',
+  'energy_export',
+  'daily_energy',
+])
+
 export class DataCollector {
   private config: AgentConfig
   private haClient: HAClient
@@ -92,6 +103,14 @@ export class DataCollector {
       return 'solar_production'
     }
 
+    // Home consumption (přímá spotřeba domu)
+    if (
+      (id.includes('home') || id.includes('house') || id.includes('dum') || id.includes('dům') || id.includes('load')) &&
+      (id.includes('energy') || id.includes('consumption') || id.includes('spotreba') || id.includes('spotřeba'))
+    ) {
+      return 'home_consumption'
+    }
+
     if (id.includes('battery') && (id.includes('soc') || id.includes('level'))) {
       return 'battery_soc'
     }
@@ -123,6 +142,27 @@ export class DataCollector {
       entityId: sensorId,
       friendlyName: sensorId,
     }))
+  }
+
+  private normalizeMetricValue(mapping: EntityMapping, state: { attributes?: Record<string, unknown> }, value: number): number {
+    if (!ENERGY_METRIC_TYPES.has(mapping.type)) {
+      return value
+    }
+
+    const configuredUnit = typeof mapping.unit === 'string' ? mapping.unit : ''
+    const stateUnitRaw = state.attributes?.unit_of_measurement
+    const detectedUnit = typeof stateUnitRaw === 'string' ? stateUnitRaw : configuredUnit
+    const unit = detectedUnit.toLowerCase().replace(/\s+/g, '')
+
+    if (unit === 'wh') {
+      return value / 1000
+    }
+
+    if (unit === 'mwh') {
+      return value * 1000
+    }
+
+    return value
   }
 
   private loadConfig(): AgentConfig {
@@ -219,9 +259,14 @@ export class DataCollector {
         
         if (state) {
           try {
-            const value = parseFloat(state.state)
-            metrics[mapping.type] = value
-            logger.debug(`Collected ${mapping.type}: ${value}`)
+            const parsedValue = Number.parseFloat(state.state)
+            if (!Number.isFinite(parsedValue)) {
+              throw new Error('Metric value is not a finite number')
+            }
+
+            const normalizedValue = this.normalizeMetricValue(mapping, state, parsedValue)
+            metrics[mapping.type] = normalizedValue
+            logger.debug(`Collected ${mapping.type}: ${normalizedValue}`)
           } catch (error) {
             logger.warn(`Failed to parse value for ${mapping.entityId}`)
             allSuccess = false

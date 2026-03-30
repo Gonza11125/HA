@@ -20,8 +20,13 @@ export interface DashboardData {
   efficiency: number
   temperature: number
   gridImport: number
+  gridExport: number
   solarProduction: number
+  homeConsumption: number
   selfConsumptionPercent: number
+  hasGridImport: boolean
+  hasGridExport: boolean
+  hasHomeConsumption: boolean
 }
 
 export const useDashboardStore = () => {

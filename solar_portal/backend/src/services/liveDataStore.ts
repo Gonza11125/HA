@@ -10,8 +10,13 @@ interface LiveData {
   efficiency: number
   temperature: number
   gridImport: number
+  gridExport: number
   solarProduction: number
+  homeConsumption: number
   selfConsumptionPercent: number
+  hasGridImport: boolean
+  hasGridExport: boolean
+  hasHomeConsumption: boolean
 }
 
 interface HistoryPoint {
@@ -21,7 +26,9 @@ interface HistoryPoint {
   battery: number
   timestamp: string
   gridImport: number
+  gridExport: number
   solarProduction: number
+  homeConsumption: number
   selfConsumptionPercent: number
 }
 
@@ -44,8 +51,13 @@ let liveData: LiveData = {
   efficiency: 0,
   temperature: 0,
   gridImport: 0,
+  gridExport: 0,
   solarProduction: 0,
+  homeConsumption: 0,
   selfConsumptionPercent: 0,
+  hasGridImport: false,
+  hasGridExport: false,
+  hasHomeConsumption: false,
 }
 
 const HISTORY_RETENTION_HOURS = 24 * 30
@@ -53,6 +65,21 @@ const HISTORY_RETENTION_HOURS = 24 * 30
 function toNumber(value: unknown, fallback: number): number {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function hasMetric(metrics: Record<string, number | string>, keys: string[]): boolean {
+  return keys.some((key) => {
+    const value = metrics[key]
+    if (value === undefined || value === null) {
+      return false
+    }
+
+    if (typeof value === 'string') {
+      return value.trim() !== ''
+    }
+
+    return true
+  })
 }
 
 export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
@@ -66,23 +93,27 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
   const current = toNumber(metrics.current ?? metrics.battery_current, liveData.current)
   const temperature = toNumber(metrics.temperature ?? metrics.inverter_temperature, liveData.temperature)
   const efficiency = toNumber(metrics.efficiency, liveData.efficiency)
-  
-  // Nové metriky
+
+  const hasGridImport = hasMetric(metrics, ['grid_import', 'grid_energy_import', 'energy_import'])
+  const hasGridExport = hasMetric(metrics, ['grid_export', 'grid_energy_export', 'energy_export'])
+  const hasHomeConsumption = hasMetric(metrics, ['home_consumption', 'home_energy', 'house_consumption', 'load_energy'])
+
   const gridImport = toNumber(metrics.grid_import ?? metrics.grid_energy_import ?? metrics.energy_import, liveData.gridImport)
+  const gridExport = toNumber(metrics.grid_export ?? metrics.grid_energy_export ?? metrics.energy_export, liveData.gridExport)
   const solarProduction = toNumber(metrics.solar_production ?? metrics.solar_energy ?? metrics.pv_energy, liveData.solarProduction)
-  
-  // Výpočet procenta využití
+  const homeConsumption = toNumber(
+    metrics.home_consumption ?? metrics.home_energy ?? metrics.house_consumption ?? metrics.load_energy,
+    liveData.homeConsumption,
+  )
+
+  // Vypočítej samospotřebu jen z přesných dat (export nebo přímé měření spotřeby domu).
   let selfConsumptionPercent = liveData.selfConsumptionPercent
   if (solarProduction > 0) {
-    const gridExport = toNumber(metrics.grid_export ?? metrics.grid_energy_export ?? metrics.energy_export, 0)
-    if (gridExport > 0) {
+    if (hasGridExport) {
       selfConsumptionPercent = Math.max(0, Math.min(100, ((solarProduction - gridExport) / solarProduction) * 100))
-    } else {
-      if (gridImport > 0) {
-        selfConsumptionPercent = 100
-      } else {
-        selfConsumptionPercent = power > 0 ? Math.min(100, (power / solarProduction) * 100) : liveData.selfConsumptionPercent
-      }
+    } else if (hasHomeConsumption) {
+      const solarUsedAtHome = Math.max(homeConsumption - gridImport, 0)
+      selfConsumptionPercent = Math.max(0, Math.min(100, (solarUsedAtHome / solarProduction) * 100))
     }
   }
 
@@ -98,8 +129,13 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
     efficiency,
     temperature,
     gridImport,
+    gridExport,
     solarProduction,
+    homeConsumption,
     selfConsumptionPercent,
+    hasGridImport,
+    hasGridExport,
+    hasHomeConsumption,
   }
 
   history.push({
@@ -109,7 +145,9 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
     battery,
     timestamp: nowIso,
     gridImport,
+    gridExport,
     solarProduction,
+    homeConsumption,
     selfConsumptionPercent,
   })
 
