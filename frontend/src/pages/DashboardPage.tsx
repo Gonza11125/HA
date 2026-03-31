@@ -390,9 +390,34 @@ export const DashboardPage = () => {
 
   const lastSyncLabel = useMemo(() => formatTimeLabel(store.lastUpdate, 0.5, 'N/A'), [store.lastUpdate])
   const activeAutomations = useMemo(() => automations.filter((item) => item.enabled).length, [automations])
+  const effectiveSelfConsumptionPercent = useMemo(() => {
+    if (normalizedSolarProduction <= 0) {
+      return 0
+    }
+
+    if (Boolean(data.hasGridExport)) {
+      return Math.max(0, Math.min(100, ((normalizedSolarProduction - normalizedGridExport) / normalizedSolarProduction) * 100))
+    }
+
+    if (Boolean(data.hasHomeConsumption)) {
+      const solarUsedAtHome = Math.max(normalizedHomeConsumption - normalizedGridImport, 0)
+      return Math.max(0, Math.min(100, (solarUsedAtHome / normalizedSolarProduction) * 100))
+    }
+
+    const fallback = Number(data.selfConsumptionPercent)
+    return Number.isFinite(fallback) ? Math.max(0, Math.min(100, fallback)) : 0
+  }, [
+    data.hasGridExport,
+    data.hasHomeConsumption,
+    data.selfConsumptionPercent,
+    normalizedGridExport,
+    normalizedGridImport,
+    normalizedHomeConsumption,
+    normalizedSolarProduction,
+  ])
   const selfConsumptionEnergy = useMemo(
-    () => normalizedSolarProduction * (Number(data.selfConsumptionPercent) / 100),
-    [data.selfConsumptionPercent, normalizedSolarProduction],
+    () => normalizedSolarProduction * (effectiveSelfConsumptionPercent / 100),
+    [effectiveSelfConsumptionPercent, normalizedSolarProduction],
   )
   const estimatedHomeUsage = useMemo(() => {
     if (Boolean(data.hasHomeConsumption)) {
@@ -480,7 +505,7 @@ export const DashboardPage = () => {
   const recommendations = useMemo<InsightItem[]>(() => {
     const items: InsightItem[] = []
 
-    if (Number(data.selfConsumptionPercent) >= 70) {
+    if (effectiveSelfConsumptionPercent >= 70) {
       items.push({
         title: 'Dobre vyuzivate vlastni vyrobu',
         body: 'Sobestacnost je vysoka. Dnes je vhodny cas pro planovane spotrebice.',
@@ -513,7 +538,7 @@ export const DashboardPage = () => {
     }
 
     return items.slice(0, 3)
-  }, [data.battery, data.selfConsumptionPercent, normalizedGridImport, normalizedSolarProduction, store.isOnline])
+  }, [data.battery, effectiveSelfConsumptionPercent, normalizedGridImport, normalizedSolarProduction, store.isOnline])
 
   const diagnostics = useMemo<DiagnosticsItem[]>(() => {
     return [
@@ -700,10 +725,9 @@ export const DashboardPage = () => {
           <MetricCard title="Aktualni vykon" value={Math.round(data.power)} unit="W" icon="⚡" color="yellow" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('power')} />
           <MetricCard title="Energie dnes" value={normalizedEnergy.toFixed(1)} unit="kWh" icon="📈" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('energy')} />
           <MetricCard title="Stav baterie" value={Math.round(data.battery)} unit="%" icon="🔋" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('battery')} />
-          <MetricCard title="Vyroba FVE dnes" value={normalizedSolarProduction.toFixed(2)} unit="kWh" icon="☀️" color="green" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('solarProduction')} />
           <MetricCard title="Vyroba FVE celkem" value={normalizedSolarProductionTotal.toFixed(2)} unit="kWh" icon="🔆" color="green" subtitle="Celkova vyroba od zacatku provozu" />
           <MetricCard title="Nakoupena energie" value={normalizedGridImport.toFixed(2)} unit="kWh" icon="🏭" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('gridImport')} />
-          <MetricCard title="Vyuziti FVE" value={Math.round(data.selfConsumptionPercent)} unit="%" icon="♻️" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('selfConsumptionPercent')} />
+          <MetricCard title="Vyuziti FVE" value={Math.round(effectiveSelfConsumptionPercent)} unit="%" icon="♻️" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('selfConsumptionPercent')} />
           <MetricCard title="Teplota" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('temperature')} />
         </div>
 

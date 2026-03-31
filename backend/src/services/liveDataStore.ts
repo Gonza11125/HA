@@ -114,15 +114,23 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
     liveData.homeConsumption,
   )
 
-  // Vypočítej samospotřebu jen z přesných dat (export nebo přímé měření spotřeby domu).
-  let selfConsumptionPercent = liveData.selfConsumptionPercent
+  // Vypočítej samospotřebu jen z měření, která dávají fyzikálně smysl.
+  let selfConsumptionPercent = 0
+  let selfConsumptionReliable = false
   if (solarProduction > 0) {
     if (hasGridExport) {
       selfConsumptionPercent = Math.max(0, Math.min(100, ((solarProduction - gridExport) / solarProduction) * 100))
+      selfConsumptionReliable = true
     } else if (hasHomeConsumption) {
       const solarUsedAtHome = Math.max(homeConsumption - gridImport, 0)
       selfConsumptionPercent = Math.max(0, Math.min(100, (solarUsedAtHome / solarProduction) * 100))
+      selfConsumptionReliable = true
     }
+  }
+
+  if (!selfConsumptionReliable && solarProduction > 0 && Number.isFinite(liveData.selfConsumptionPercent)) {
+    // Drž poslední známou hodnotu jen pokud se nedá dopočítat v aktuálním vzorku.
+    selfConsumptionPercent = liveData.selfConsumptionPercent
   }
 
   liveData = {
