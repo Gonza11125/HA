@@ -68,7 +68,7 @@ const METRIC_CONFIG: Record<ChartMetric, MetricConfig> = {
   battery: { label: 'Baterie', title: 'Stav baterie', unit: '%', color: '#2563eb' },
   gridImport: { label: 'Sit', title: 'Odber ze site', unit: 'kWh', color: '#ef4444' },
   solarProduction: { label: 'FVE', title: 'Vyroba FVE dnes', unit: 'kWh', color: '#22c55e' },
-  selfConsumptionPercent: { label: 'Sobestacnost', title: 'Vyuziti FVE', unit: '%', color: '#06b6d4' },
+  selfConsumptionPercent: { label: 'Vyuziti vyroby', title: 'Vyuziti vyroby FVE', unit: '%', color: '#06b6d4' },
 }
 
 const METRIC_HELP: Record<DashboardMetric, MetricHelp> = {
@@ -108,10 +108,10 @@ const METRIC_HELP: Record<DashboardMetric, MetricHelp> = {
     updateInterval: 'Prubezne behem dne.',
   },
   selfConsumptionPercent: {
-    label: 'Vyuziti FVE',
+    label: 'Vyuziti vyroby FVE',
     unit: '%',
-    description: 'Podil vyrobene energie, kterou vyuzijete doma.',
-    interpretation: 'Vyssi procento znamena lepsi vyuziti vlastni vyroby.',
+    description: 'Podil dnes vyrobene FVE energie, ktery se spotreboval doma (neexportoval do site).',
+    interpretation: 'Nejde o celkovou sobestacnost domu. 100 % znamena, ze dnesni vyroba FVE nebyla exportovana.',
     updateInterval: 'Prubezne behem dne.',
   },
   temperature: {
@@ -647,8 +647,8 @@ export const DashboardPage = () => {
 
     if (effectiveSelfConsumptionPercent >= 70) {
       items.push({
-        title: 'Dobre vyuzivate vlastni vyrobu',
-        body: 'Sobestacnost je vysoka. Dnes je vhodny cas pro planovane spotrebice.',
+        title: 'Dobre vyuzivate dnesni vyrobu FVE',
+        body: 'Vysoke vyuziti vyroby znamena malo exportu do site.',
         tone: 'good',
       })
     }
@@ -907,7 +907,7 @@ export const DashboardPage = () => {
             trendText={gridImportTrend.text}
             onClick={() => setOpenedMetricHelp('gridImport')}
           />
-          <MetricCard title="Vyuziti FVE" value={Math.round(effectiveSelfConsumptionPercent)} unit="%" icon="♻️" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('selfConsumptionPercent')} />
+          <MetricCard title="Vyuziti vyroby FVE" value={Math.round(effectiveSelfConsumptionPercent)} unit="%" icon="♻️" color="blue" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('selfConsumptionPercent')} />
           <MetricCard title="Teplota" value={Math.round(data.temperature)} unit="°C" icon="🌡️" color="red" subtitle="Kliknete pro popis veliciny" onClick={() => setOpenedMetricHelp('temperature')} />
         </div>
 
