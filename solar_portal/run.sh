@@ -178,53 +178,23 @@ fs.writeFileSync(outputPath, JSON.stringify(config, null, 2), 'utf-8')
 console.log('[INFO] Agent config written to /data/agent-config.json')
 NODE
 
-# Start backend
+# Start backend (frontend will be served as static files from /app/frontend/dist)
 cd /app/backend
-echo "[INFO] Starting backend on port 5000..."
+echo "[INFO] Starting backend on port 5000 (serves frontend + API)..."
 DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_NAME=solar_portal NODE_ENV=production PORT=5000 npm start &
 BACKEND_PID=$!
 echo "[INFO] Backend started with PID $BACKEND_PID, waiting 4 seconds..."
 sleep 4
 
-# Start frontend (on port 3001, proxied through nginx)
+# Start frontend
 cd /app/frontend
-echo "[INFO] Starting frontend on port 3001 (behind nginx proxy)..."
-serve -s dist -l 3001 &
+echo "[INFO] Starting frontend on port 3000..."
+serve -s dist -l 3000 &
 FRONTEND_PID=$!
-echo "[INFO] Frontend started with PID $FRONTEND_PID, waiting 3 seconds..."
-sleep 3
+echo "[INFO] Frontend started with PID $FRONTEND_PID"
 
-# Start nginx reverse proxy (port 3000 for ingress)
-echo "[INFO] Starting nginx reverse proxy on port 3000..."
-mkdir -p /tmp
-
-# Test nginx config first
-echo "[INFO] Testing nginx config..."
-if ! nginx -t -c /app/nginx.conf 2>&1; then
-  echo "[ERROR] Nginx config test failed. Check /tmp/nginx_error.log"
-  nginx -c /app/nginx.conf 2>&1 | head -20
-fi
-
-# Start nginx (daemon mode, runs in background)
-echo "[INFO] Starting nginx..."
-nginx -c /app/nginx.conf
-NGINX_PID=$!
-echo "[INFO] Nginx started with PID $NGINX_PID"
+# Give frontend time to start
 sleep 2
-
-# Verify nginx is responding (simple health check)
-echo "[INFO] Checking nginx responsiveness..."
-for i in {1..10}; do
-  if curl -s http://127.0.0.1:3000/health-check > /dev/null 2>&1; then
-    echo "[INFO] ✓ Nginx health check passed on attempt $i!"
-    break
-  elif [ $i -lt 10 ]; then
-    echo "[INFO] Nginx attempt $i/10, retrying..."
-    sleep 1
-  else
-    echo "[WARN] Nginx health check timeout after 10 attempts, but continuing..."
-  fi
-done
 
 # Start agent (data collector)
 cd /app/agent
@@ -233,20 +203,12 @@ CONFIG_PATH="$AGENT_CONFIG_PATH" node dist/index.js &
 AGENT_PID=$!
 echo "[INFO] Agent started with PID $AGENT_PID"
 
-# Final readiness check
 echo "[INFO] ========================================="
 echo "[INFO] Solar Portal is running!"
-echo "[INFO] Frontend: http://localhost:3000/ (via ingress)"
-echo "[INFO] Backend:  http://localhost:5000/ (internal)"
-echo "[INFO] Nginx:    Proxying on port 3000"
+echo "[INFO] Frontend: http://YOUR_IP:3000"
+echo "[INFO] Backend:  http://YOUR_IP:5000"
 echo "[INFO] Agent:    Collecting data from Home Assistant"
 echo "[INFO] ========================================="
-echo "[INFO] "
-echo "[INFO] Ready for ingress requests!"
-echo "[INFO] ========================================="
-
-# Trap errors and log them
-trap 'echo "[ERROR] Process interrupted or failed. Logs available at /tmp/"; exit 1' EXIT
 
 # Wait for all processes
-wait $POSTGRES_PID $BACKEND_PID $FRONTEND_PID $NGINX_PID $AGENT_PID
+wait $POSTGRES_PID $BACKEND_PID $FRONTEND_PID $AGENT_PID

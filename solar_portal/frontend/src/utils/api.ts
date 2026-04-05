@@ -7,8 +7,14 @@ const getRuntimeApiBaseUrl = () => {
     return 'http://localhost:5000/api'
   }
 
-  // Prefer same-origin API path so localhost and public domain behave consistently behind a proxy.
+  if (window.location.port === '3000') {
+    const host = window.location.hostname || 'localhost'
+    return `http://${host}:5000/api`
+  }
+
+  // When served through ingress or directly by backend, use same-origin API.
   return '/api'
+
 }
 
 const getApiBaseUrl = () => {

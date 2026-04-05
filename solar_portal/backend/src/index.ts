@@ -97,6 +97,9 @@ app.use(cookieParser());
 app.use(rateLimiter);
 
 // ============== Routes ==============
+// Serve frontend static files (built React SPA)
+const FRONTEND_DIR = "/app/frontend/dist";
+app.use(express.static(FRONTEND_DIR));
 
 // Health check
 app.use("/health", healthRoutes);
@@ -116,6 +119,20 @@ app.use("/api/data", dataRoutes);
 
 // Admin routes (admin role required)
 app.use("/api/admin", adminRoutes);
+
+// SPA Fallback: Serve index.html for non-API routes not matching files
+app.use((req: Request, res: Response, next) => {
+  // Skip API and other non-SPA routes
+  if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+    return next();
+  }
+  // Check if request is for a file (has extension)
+  if (/\.[a-z0-9]+$/i.test(req.path)) {
+    return next();
+  }
+  // Serve index.html for SPA routes
+  res.sendFile(`${FRONTEND_DIR}/index.html`);
+});
 
 // 404 handler
 app.use((req: Request, res: Response): void => {
