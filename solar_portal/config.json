@@ -1,18 +1,24 @@
 {
   "name": "Solar Portal",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "slug": "solar_portal",
   "description": "Solar energy monitoring portal with Home Assistant integration",
   "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"],
   "startup": "application",
   "boot": "auto",
+  "ingress": {
+    "title": "Solar Portal",
+    "icon": "mdi:solar-power",
+    "panel_icon": "mdi:home-energy-monitor",
+    "panel_title": "Solar Portal",
+    "port": 3000,
+    "panel": true
+  },
   "ports": {
-    "3000/tcp": 3000,
     "5000/tcp": 5000
   },
   "ports_description": {
-    "3000/tcp": "Web Frontend",
-    "5000/tcp": "Backend API"
+    "5000/tcp": "Backend API (internal)"
   },
   "options": {
     "log_level": "info",

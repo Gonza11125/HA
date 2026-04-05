@@ -188,15 +188,23 @@ echo "[INFO] Backend started with PID $BACKEND_PID"
 # Give backend time to start
 sleep 3
 
-# Start frontend
+# Start frontend (on port 3001, proxied through nginx)
 cd /app/frontend
-echo "[INFO] Starting frontend on port 3000..."
-serve -s dist -l 3000 &
+echo "[INFO] Starting frontend on port 3001 (behind nginx proxy)..."
+serve -s dist -l 3001 &
 FRONTEND_PID=$!
 echo "[INFO] Frontend started with PID $FRONTEND_PID"
 
 # Give frontend time to start
 sleep 2
+
+# Start nginx reverse proxy (port 3000 for ingress)
+echo "[INFO] Starting nginx reverse proxy on port 3000..."
+nginx -c /app/nginx.conf -g "daemon off;" &
+NGINX_PID=$!
+echo "[INFO] Nginx started with PID $NGINX_PID"
+
+sleep 1
 
 # Start agent (data collector)
 cd /app/agent
@@ -207,10 +215,10 @@ echo "[INFO] Agent started with PID $AGENT_PID"
 
 echo "[INFO] ========================================="
 echo "[INFO] Solar Portal is running!"
-echo "[INFO] Frontend: http://YOUR_IP:3000"
-echo "[INFO] Backend:  http://YOUR_IP:5000"
+echo "[INFO] Frontend: http://localhost:3000 (via ingress)"
+echo "[INFO] Backend:  http://localhost:5000 (internal)"
 echo "[INFO] Agent:    Collecting data from Home Assistant"
 echo "[INFO] ========================================="
 
 # Wait for all processes
-wait $POSTGRES_PID $BACKEND_PID $FRONTEND_PID $AGENT_PID
+wait $POSTGRES_PID $BACKEND_PID $FRONTEND_PID $NGINX_PID $AGENT_PID

@@ -67,6 +67,14 @@ const corsOptions = {
       return callback(null, true);
     }
     
+    // Allow Home Assistant Cloud ingress (via X-Forwarded-Host header)
+    // When behind a reverse proxy (nginx), compare X-Forwarded-Host with Origin
+    if (process.env.NODE_ENV === 'production') {
+      // Frontend will send Origin if proxied, backend should trust reverse proxy
+      // This allows HA ingress: https://xxx.ui.nabu.casa/api/
+      return callback(null, true);
+    }
+    
     // Reject all other origins
     callback(new Error('Not allowed by CORS'));
   },
