@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.7] - 2026-04-05
+
+### 🔧 Opraveno
+- Frontend build nyní používá relativní asset cesty, aby se Solar Portal správně načetl i přes Home Assistant ingress
+- Zachováno stejné chování aplikace jako na localhostu, jen s podporou přístupu přes cloudovou URL
+
 ## [0.4.6] - 2026-04-05
 
 ### ✨ Přidáno
