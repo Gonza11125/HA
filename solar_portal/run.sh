@@ -197,22 +197,45 @@ sleep 3
 # Start nginx reverse proxy (port 3000 for ingress)
 echo "[INFO] Starting nginx reverse proxy on port 3000..."
 mkdir -p /tmp
-nginx -c /app/nginx.conf -g "daemon off;" &
+
+# Test nginx config first
+echo "[INFO] Testing nginx config..."
+if ! nginx -t -c /app/nginx.conf 2>&1; then
+  echo "[ERROR] Nginx config test failed. Check /tmp/nginx_error.log"
+  nginx -c /app/nginx.conf 2>&1 | head -20
+fi
+
+# Start nginx in foreground mode (background process)
+echo "[INFO] Starting nginx in background..."
+nginx -c /app/nginx.conf -g "daemon off;" > /tmp/nginx_startup.log 2>&1 &
 NGINX_PID=$!
-echo "[INFO] Nginx started with PID $NGINX_PID, waiting 2 seconds..."
+echo "[INFO] Nginx PID: $NGINX_PID"
 sleep 2
 
+# Check if nginx process is still running
+if ! kill -0 $NGINX_PID 2>/dev/null; then
+  echo "[ERROR] Nginx failed to start. Checking logs:"
+  cat /tmp/nginx_error.log 2>/dev/null || echo "(no error log)"
+  cat /tmp/nginx_startup.log 2>/dev/null || echo "(no startup log)"
+fi
+
 # Verify nginx is responding (simple health check)
-for i in {1..5}; do
+echo "[INFO] Checking nginx responsiveness..."
+for i in {1..8}; do
   if curl -s http://127.0.0.1:3000/health-check > /dev/null 2>&1; then
-    echo "[INFO] Nginx health check passed!"
+    echo "[INFO] ✓ Nginx health check passed on attempt $i!"
     break
-  fi
-  if [ $i -eq 5 ]; then
-    echo "[WARN] Nginx health check failed after 5 attempts, but continuing..."
-  else
-    echo "[INFO] Nginx health check attempt $i/5, retrying..."
+  elif [ $i -lt 8 ]; then
+    echo "[INFO] Nginx attempt $i/8, retrying..."
     sleep 1
+  else
+    echo "[WARN] Nginx health check timeout after 8 attempts, but continuing..."
+    echo "[WARN] Checking if nginx process is running..."
+    if ps -p $NGINX_PID > /dev/null 2>&1; then
+      echo "[WARN] Nginx is running (PID $NGINX_PID), may need time to respond"
+    else
+      echo "[ERROR] Nginx process died. Check logs above."
+    fi
   fi
 done
 
