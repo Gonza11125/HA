@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.8] - 2026-04-05
+
+### 🔧 Opraveno
+- API volání nyní zachovávají ingress prefix, takže nepadnou na 404 mimo add-on cestu
+- Redirect na login používá hash route (`#/login`), aby fungoval i přes Home Assistant ingress
+
 ## [0.4.7] - 2026-04-05
 
 ### 🔧 Opraveno
