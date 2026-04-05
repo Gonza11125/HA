@@ -183,28 +183,38 @@ cd /app/backend
 echo "[INFO] Starting backend on port 5000..."
 DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_NAME=solar_portal NODE_ENV=production PORT=5000 npm start &
 BACKEND_PID=$!
-echo "[INFO] Backend started with PID $BACKEND_PID"
-
-# Give backend time to start
-sleep 3
+echo "[INFO] Backend started with PID $BACKEND_PID, waiting 4 seconds..."
+sleep 4
 
 # Start frontend (on port 3001, proxied through nginx)
 cd /app/frontend
 echo "[INFO] Starting frontend on port 3001 (behind nginx proxy)..."
 serve -s dist -l 3001 &
 FRONTEND_PID=$!
-echo "[INFO] Frontend started with PID $FRONTEND_PID"
-
-# Give frontend time to start
-sleep 2
+echo "[INFO] Frontend started with PID $FRONTEND_PID, waiting 3 seconds..."
+sleep 3
 
 # Start nginx reverse proxy (port 3000 for ingress)
 echo "[INFO] Starting nginx reverse proxy on port 3000..."
+mkdir -p /tmp
 nginx -c /app/nginx.conf -g "daemon off;" &
 NGINX_PID=$!
-echo "[INFO] Nginx started with PID $NGINX_PID"
+echo "[INFO] Nginx started with PID $NGINX_PID, waiting 2 seconds..."
+sleep 2
 
-sleep 1
+# Verify nginx is responding (simple health check)
+for i in {1..5}; do
+  if curl -s http://127.0.0.1:3000/health-check > /dev/null 2>&1; then
+    echo "[INFO] Nginx health check passed!"
+    break
+  fi
+  if [ $i -eq 5 ]; then
+    echo "[WARN] Nginx health check failed after 5 attempts, but continuing..."
+  else
+    echo "[INFO] Nginx health check attempt $i/5, retrying..."
+    sleep 1
+  fi
+done
 
 # Start agent (data collector)
 cd /app/agent
@@ -213,12 +223,20 @@ CONFIG_PATH="$AGENT_CONFIG_PATH" node dist/index.js &
 AGENT_PID=$!
 echo "[INFO] Agent started with PID $AGENT_PID"
 
+# Final readiness check
 echo "[INFO] ========================================="
 echo "[INFO] Solar Portal is running!"
-echo "[INFO] Frontend: http://localhost:3000 (via ingress)"
-echo "[INFO] Backend:  http://localhost:5000 (internal)"
+echo "[INFO] Frontend: http://localhost:3000/ (via ingress)"
+echo "[INFO] Backend:  http://localhost:5000/ (internal)"
+echo "[INFO] Nginx:    Proxying on port 3000"
 echo "[INFO] Agent:    Collecting data from Home Assistant"
 echo "[INFO] ========================================="
+echo "[INFO] "
+echo "[INFO] Ready for ingress requests!"
+echo "[INFO] ========================================="
+
+# Trap errors and log them
+trap 'echo "[ERROR] Process interrupted or failed. Logs available at /tmp/"; exit 1' EXIT
 
 # Wait for all processes
 wait $POSTGRES_PID $BACKEND_PID $FRONTEND_PID $NGINX_PID $AGENT_PID
