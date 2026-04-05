@@ -24,6 +24,20 @@ dotenv.config();
 const app: Express = express();
 const PORT = process.env.BACKEND_PORT || 5000;
 
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
+
+const getAllowedCorsOrigins = (): Set<string> => {
+  const raw = process.env.CORS_ORIGIN || "";
+  return new Set(
+    raw
+      .split(",")
+      .map((origin) => trimTrailingSlash(origin.trim()))
+      .filter(Boolean)
+  );
+};
+
+const allowedCorsOrigins = getAllowedCorsOrigins();
+
 // ============== Middleware ==============
 
 // Security
@@ -48,8 +62,8 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    // Allow custom CORS_ORIGIN from environment
-    if (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN) {
+    // Allow custom CORS_ORIGIN values from environment (comma-separated supported)
+    if (allowedCorsOrigins.has(trimTrailingSlash(origin))) {
       return callback(null, true);
     }
     
