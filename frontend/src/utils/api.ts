@@ -7,8 +7,8 @@ const getRuntimeApiBaseUrl = () => {
     return 'http://localhost:5000/api'
   }
 
-  const host = window.location.hostname || 'localhost'
-  return `http://${host}:5000/api`
+  // Prefer same-origin API path so localhost and public domain behave consistently behind a proxy.
+  return '/api'
 }
 
 const getApiBaseUrl = () => {
@@ -24,6 +24,10 @@ const getApiBaseUrl = () => {
 
     const host = window.location.hostname || 'localhost'
     return trimTrailingSlash(`http://${host}${envValue}`)
+  }
+
+  if (envValue.startsWith('/')) {
+    return trimTrailingSlash(envValue)
   }
 
   return trimTrailingSlash(envValue)

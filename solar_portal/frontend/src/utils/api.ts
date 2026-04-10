@@ -7,8 +7,21 @@ const getRuntimeApiBaseUrl = () => {
     return 'http://localhost:5000/api'
   }
 
-  const host = window.location.hostname || 'localhost'
-  return `http://${host}:5000/api`
+  const cleanPath = window.location.pathname.replace(/\/+$/, '')
+
+  if (window.location.port === '3000') {
+    const host = window.location.hostname || 'localhost'
+    return `http://${host}:5000/api`
+  }
+
+  // In ingress mode, keep the add-on prefix in the path.
+  if (cleanPath && cleanPath !== '/') {
+    return `${cleanPath}/api`
+  }
+
+  // Direct backend mode (same-origin root)
+  return '/api'
+
 }
 
 const getApiBaseUrl = () => {
@@ -24,6 +37,10 @@ const getApiBaseUrl = () => {
 
     const host = window.location.hostname || 'localhost'
     return trimTrailingSlash(`http://${host}${envValue}`)
+  }
+
+  if (envValue.startsWith('/')) {
+    return trimTrailingSlash(envValue)
   }
 
   return trimTrailingSlash(envValue)
@@ -44,7 +61,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      window.location.href = '/login'
+      window.location.hash = '#/login'
     }
     return Promise.reject(error)
   }

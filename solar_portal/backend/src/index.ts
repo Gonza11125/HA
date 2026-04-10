@@ -24,6 +24,20 @@ dotenv.config();
 const app: Express = express();
 const PORT = process.env.BACKEND_PORT || 5000;
 
+const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
+
+const getAllowedCorsOrigins = (): Set<string> => {
+  const raw = process.env.CORS_ORIGIN || "";
+  return new Set(
+    raw
+      .split(",")
+      .map((origin) => trimTrailingSlash(origin.trim()))
+      .filter(Boolean)
+  );
+};
+
+const allowedCorsOrigins = getAllowedCorsOrigins();
+
 // ============== Middleware ==============
 
 // Security
@@ -48,8 +62,16 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    // Allow custom CORS_ORIGIN from environment
-    if (process.env.CORS_ORIGIN && origin === process.env.CORS_ORIGIN) {
+    // Allow custom CORS_ORIGIN values from environment (comma-separated supported)
+    if (allowedCorsOrigins.has(trimTrailingSlash(origin))) {
+      return callback(null, true);
+    }
+    
+    // Allow Home Assistant Cloud ingress (via X-Forwarded-Host header)
+    // When behind a reverse proxy (nginx), compare X-Forwarded-Host with Origin
+    if (process.env.NODE_ENV === 'production') {
+      // Frontend will send Origin if proxied, backend should trust reverse proxy
+      // This allows HA ingress: https://xxx.ui.nabu.casa/api/
       return callback(null, true);
     }
     
@@ -75,6 +97,9 @@ app.use(cookieParser());
 app.use(rateLimiter);
 
 // ============== Routes ==============
+// Serve frontend static files (built React SPA)
+const FRONTEND_DIR = "/app/frontend/dist";
+app.use(express.static(FRONTEND_DIR));
 
 // Health check
 app.use("/health", healthRoutes);
@@ -94,6 +119,20 @@ app.use("/api/data", dataRoutes);
 
 // Admin routes (admin role required)
 app.use("/api/admin", adminRoutes);
+
+// SPA Fallback: Serve index.html for non-API routes not matching files
+app.use((req: Request, res: Response, next) => {
+  // Skip API and other non-SPA routes
+  if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+    return next();
+  }
+  // Check if request is for a file (has extension)
+  if (/\.[a-z0-9]+$/i.test(req.path)) {
+    return next();
+  }
+  // Serve index.html for SPA routes
+  res.sendFile(`${FRONTEND_DIR}/index.html`);
+});
 
 // 404 handler
 app.use((req: Request, res: Response): void => {

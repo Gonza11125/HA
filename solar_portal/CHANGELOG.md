@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.4.8] - 2026-04-05
+
+### 🔧 Opraveno
+- API volání nyní zachovávají ingress prefix, takže nepadnou na 404 mimo add-on cestu
+- Redirect na login používá hash route (`#/login`), aby fungoval i přes Home Assistant ingress
+
+## [0.4.7] - 2026-04-05
+
+### 🔧 Opraveno
+- Frontend build nyní používá relativní asset cesty, aby se Solar Portal správně načetl i přes Home Assistant ingress
+- Zachováno stejné chování aplikace jako na localhostu, jen s podporou přístupu přes cloudovou URL
+
+## [0.4.6] - 2026-04-05
+
+### ✨ Přidáno
+- Podpora Home Assistant ingress přístupu přes `ui.nabu.casa`
+- Zachovaný nezávislý přístup na lokální webové adrese add-onu
+
+### 🔧 Opraveno
+- Stabilnější přepínání API adres mezi lokálním a ingress režimem
+- Úpravy konfigurace add-onu pro novou distribuční verzi
+
 ## [0.3.4] - 2026-03-03
 
 ### ✨ Přidáno

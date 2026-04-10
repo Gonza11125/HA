@@ -208,15 +208,13 @@ fs.writeFileSync(outputPath, JSON.stringify(config, null, 2), 'utf-8')
 console.log('[INFO] Agent config written to /data/agent-config.json')
 NODE
 
-# Start backend
+# Start backend (frontend will be served as static files from /app/frontend/dist)
 cd /app/backend
-echo "[INFO] Starting backend on port 5000..."
+echo "[INFO] Starting backend on port 5000 (serves frontend + API)..."
 DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_NAME=solar_portal NODE_ENV=production PORT=5000 npm start &
 BACKEND_PID=$!
-echo "[INFO] Backend started with PID $BACKEND_PID"
-
-# Give backend time to start
-sleep 3
+echo "[INFO] Backend started with PID $BACKEND_PID, waiting 4 seconds..."
+sleep 4
 
 # Start frontend
 cd /app/frontend

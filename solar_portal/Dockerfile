@@ -33,6 +33,7 @@ RUN apk add --no-cache \
     bash \
     postgresql \
     postgresql-client \
+    nginx \
     && mkdir -p /run/postgresql \
     && chown postgres:postgres /run/postgresql
 
@@ -55,8 +56,9 @@ COPY --from=agent-builder /build/dist ./dist
 COPY --from=agent-builder /build/node_modules ./node_modules
 COPY --from=agent-builder /build/package.json ./
 
-# Copy startup script
+# Copy startup script and nginx config
 COPY run.sh /
+COPY nginx.conf /app/
 RUN chmod +x /run.sh
 
 WORKDIR /app
