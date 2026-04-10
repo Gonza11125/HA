@@ -1,0 +1,72 @@
+[
+  {
+    "id": "kotel-plna-logika-001",
+    "name": "Kotel - plna logika podle HA",
+    "enabled": true,
+    "mode": "auto",
+    "source": "Portal",
+    "lastRun": "N/A",
+    "description": "Spousti kotel pri levne elektrine a splneni provoznich podminek.",
+    "trigger": {
+      "type": "time_pattern",
+      "minutes": "/10"
+    },
+    "conditions": [
+      {
+        "type": "state",
+        "entity": "switch.shellypro3_ece334ed4534_switch_1",
+        "state": "on",
+        "label": "Levna elektrina (HDO)"
+      },
+      {
+        "type": "state",
+        "entity": "switch.shellypro3_ece334ed4534_switch_2",
+        "state": "off",
+        "label": "Kotel je aktualne vypnuty"
+      },
+      {
+        "type": "numeric_state",
+        "entity": "sensor.alpha_ess_soc_battery",
+        "above": 90,
+        "label": "SOC baterie > 90 %"
+      },
+      {
+        "type": "sun",
+        "after": "sunrise",
+        "after_offset": "01:00:00",
+        "before": "sunset",
+        "before_offset": "-02:00:00",
+        "label": "Jen ve dne (po vychodu +1h, pred zapadem -2h)"
+      },
+      {
+        "type": "template",
+        "template": "{{ states('sensor.shellyhtg3_e4b32332c5e8_temperature') | float(99) < states('input_number.fve_topi_az_do_xdegc') | float(0) }}",
+        "label": "Teplota je mensi nez cilova hodnota"
+      },
+      {
+        "type": "state",
+        "entity": "input_boolean.rucne_vypnout_automatizaci_kotle",
+        "state": "off",
+        "label": "Rucni blokace je vypnuta"
+      }
+    ],
+    "actions": [
+      {
+        "service": "switch.turn_on",
+        "entity": "switch.shellypro3_ece334ed4534_switch_2",
+        "label": "Zapnout kotel"
+      }
+    ],
+    "entities": {
+      "temperature": "sensor.shellyhtg3_e4b32332c5e8_temperature",
+      "humidity": "sensor.shellyhtg3_e4b32332c5e8_humidity",
+      "hdoSwitch": "switch.shellypro3_ece334ed4534_switch_1",
+      "kotelSwitch": "switch.shellypro3_ece334ed4534_switch_2",
+      "bojlerSwitch": "switch.shellypro3_ece334ed4534_switch_0"
+    },
+    "notes": [
+      "input_boolean.rucne_vypnout_automatizaci_kotle uprav podle sve realne entity, pokud se jmenuje jinak.",
+      "JSON import v Solar Portalu slouzi jako prehled; vykonavani logiky patri Home Assistant automatizaci."
+    ]
+  }
+]

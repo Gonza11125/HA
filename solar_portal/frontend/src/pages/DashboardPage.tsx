@@ -25,15 +25,6 @@ interface MetricHelp {
   updateInterval: string
 }
 
-interface AutomationRule {
-  id: string
-  name: string
-  enabled: boolean
-  mode: 'auto' | 'manual'
-  source: 'HA import' | 'HA settings' | 'Portal'
-  lastRun: string
-}
-
 interface MetricConfig {
   label: string
   title: string
@@ -131,25 +122,6 @@ const TIME_RANGE_OPTIONS: Array<{ value: TimeRange; label: string }> = [
   { value: 720, label: '30 dni' },
 ]
 
-const DEFAULT_AUTOMATIONS: AutomationRule[] = [
-  {
-    id: 'auto-water-heat',
-    name: 'Ohrev vody pri prebytku',
-    enabled: true,
-    mode: 'auto',
-    source: 'HA settings',
-    lastRun: 'Dnes 12:41',
-  },
-  {
-    id: 'auto-ev-night',
-    name: 'Nabijeni EV v noci',
-    enabled: false,
-    mode: 'auto',
-    source: 'HA settings',
-    lastRun: 'Vcera 23:10',
-  },
-]
-
 const toneClasses: Record<InsightItem['tone'], string> = {
   good: 'border-emerald-200 bg-emerald-50 text-emerald-800',
   warn: 'border-amber-200 bg-amber-50 text-amber-900',
@@ -192,15 +164,6 @@ const formatTimeLabel = (timestamp?: string, range?: TimeRange, fallback?: strin
   return date.toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit' })
 }
 
-const normalizeAutomation = (item: Record<string, unknown>, index: number, source: AutomationRule['source']): AutomationRule => ({
-  id: String(item.id ?? `${source}-${index + 1}`),
-  name: String(item.name ?? item.alias ?? `Automatizace ${index + 1}`),
-  enabled: Boolean(item.enabled ?? item.active ?? false),
-  mode: item.mode === 'manual' ? 'manual' : 'auto',
-  source,
-  lastRun: String(item.lastRun ?? 'N/A'),
-})
-
 const getBatteryLabel = (batteryLevel: number) => {
   if (batteryLevel >= 80) {
     return 'Vysoka rezerva'
@@ -209,11 +172,6 @@ const getBatteryLabel = (batteryLevel: number) => {
     return 'Stabilni stav'
   }
   return 'Nizka rezerva'
-}
-
-const getAutomationSummary = (automation: AutomationRule) => {
-  const modeLabel = automation.mode === 'auto' ? 'bezi automaticky' : 'ceka na rucni zasah'
-  return `${automation.name} ${modeLabel}. Zdroj: ${automation.source}.`
 }
 
 const normalizeDailyEnergyKwh = (value: number) => {
@@ -271,8 +229,6 @@ export const DashboardPage = () => {
   const [chartStyle, setChartStyle] = useState<ChartStyle>('line')
   const [timeRange, setTimeRange] = useState<TimeRange>(24)
   const [openedMetricHelp, setOpenedMetricHelp] = useState<DashboardMetric | null>(null)
-  const [automations, setAutomations] = useState<AutomationRule[]>(DEFAULT_AUTOMATIONS)
-  const [uploadNotice, setUploadNotice] = useState('')
 
   useEffect(() => {
     const loadPairingCode = async () => {
@@ -305,28 +261,6 @@ export const DashboardPage = () => {
     }
   }, [store.isOnline])
 
-  useEffect(() => {
-    const loadAutomationsFromHaSettings = async () => {
-      try {
-        const { data } = await apiClient.get('/agent/config')
-        const items = Array.isArray(data?.config?.haAutomations) ? data.config.haAutomations : []
-        if (items.length === 0) {
-          return
-        }
-
-        const parsed = items
-          .filter((item: unknown): item is Record<string, unknown> => typeof item === 'object' && item !== null)
-          .map((item: Record<string, unknown>, index: number) => normalizeAutomation(item, index, 'HA settings'))
-
-        setAutomations(parsed)
-        setUploadNotice('Automatizace nacteny z HA nastaveni add-onu.')
-      } catch {
-        // Keep defaults when backend config is unavailable.
-      }
-    }
-
-    void loadAutomationsFromHaSettings()
-  }, [])
 
   useEffect(() => {
     if (!isPaired || !store.isOnline) {
@@ -420,7 +354,6 @@ export const DashboardPage = () => {
   )
 
   const lastSyncLabel = useMemo(() => formatTimeLabel(store.lastUpdate, 0.5, 'N/A'), [store.lastUpdate])
-  const activeAutomations = useMemo(() => automations.filter((item) => item.enabled).length, [automations])
   const effectiveSelfConsumptionPercent = useMemo(() => {
     if (normalizedSolarProduction <= 0) {
       return 0
@@ -699,98 +632,11 @@ export const DashboardPage = () => {
       },
       {
         label: 'Automatizace',
-        value: `${activeAutomations} aktivni`,
-        tone: activeAutomations > 0 ? 'good' : 'neutral',
+        value: 'Rizeni bezi v Home Assistant',
+        tone: 'neutral',
       },
     ]
-  }, [activeAutomations, data.battery, lastSyncLabel, store.isOnline])
-
-  const handleAutomationUpload = async (file?: File) => {
-    if (!file) {
-      return
-    }
-
-    try {
-      const text = await file.text()
-      const now = new Date().toLocaleString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
-      const normalizedName = file.name.replace(/\.(json|ya?ml)$/i, '')
-
-      if (file.name.toLowerCase().endsWith('.json')) {
-        const parsed = JSON.parse(text) as unknown
-        const parsedList = Array.isArray(parsed) ? parsed : [parsed]
-        const importedItems: AutomationRule[] = parsedList
-          .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
-          .map((item, index) => ({
-            ...normalizeAutomation(item, index, 'HA import'),
-            id: String(item.id ?? `${normalizedName}-${index}`),
-            lastRun: `Import ${now}`,
-          }))
-
-        if (importedItems.length === 0) {
-          throw new Error('Soubor neobsahuje platnou automatizaci.')
-        }
-
-        setAutomations((prev) => [...importedItems, ...prev])
-        setUploadNotice(`Importovano ${importedItems.length} automatizaci z ${file.name}.`)
-        return
-      }
-
-      const inferredEnabled = /(initial_state:\s*true|state:\s*on|enabled:\s*true)/i.test(text)
-      const yamlItem: AutomationRule = {
-        id: `${normalizedName}-${Date.now()}`,
-        name: normalizedName || 'Nova automatizace',
-        enabled: inferredEnabled,
-        mode: 'auto',
-        source: 'HA import',
-        lastRun: `Import ${now}`,
-      }
-
-      setAutomations((prev) => [yamlItem, ...prev])
-      setUploadNotice(`Automatizace ${yamlItem.name} byla importovana ze souboru ${file.name}.`)
-    } catch {
-      setUploadNotice('Import se nepodaril. Pouzijte JSON nebo YAML export z Home Assistant.')
-    }
-  }
-
-  const toggleAutomation = (id: string) => {
-    setAutomations((prev) =>
-      prev.map((automation) =>
-        automation.id === id
-          ? {
-              ...automation,
-              enabled: !automation.enabled,
-            }
-          : automation,
-      ),
-    )
-  }
-
-  const switchAutomationMode = (id: string) => {
-    setAutomations((prev) =>
-      prev.map((automation) =>
-        automation.id === id
-          ? {
-              ...automation,
-              mode: automation.mode === 'auto' ? 'manual' : 'auto',
-            }
-          : automation,
-      ),
-    )
-  }
-
-  const runAutomationNow = (id: string) => {
-    const now = new Date().toLocaleString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
-    setAutomations((prev) =>
-      prev.map((automation) =>
-        automation.id === id
-          ? {
-              ...automation,
-              lastRun: `Rucni spusteni ${now}`,
-            }
-          : automation,
-      ),
-    )
-  }
+  }, [data.battery, lastSyncLabel, store.isOnline])
 
   if (!isPaired) {
     return (
@@ -842,8 +688,8 @@ export const DashboardPage = () => {
                   <p className="mt-1 text-lg font-semibold text-slate-900">{getBatteryLabel(Number(data.battery))}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Aktivni automatizace</p>
-                  <p className="mt-1 text-lg font-semibold text-slate-900">{activeAutomations}</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Automatizace</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">Rizeni bezi v Home Assistant</p>
                 </div>
               </div>
             </div>
@@ -1006,62 +852,6 @@ export const DashboardPage = () => {
                 <p className="text-sm font-semibold text-slate-900">{METRIC_HELP[metric].label}</p>
                 <p className="mt-1 text-xs text-slate-600">{METRIC_HELP[metric].description}</p>
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-6 rounded-2xl border border-cyan-100 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Automatizace</h2>
-              <p className="text-sm text-slate-600">Jednoduchy prehled toho, co je zapnute, co ceka a co bylo spusteno naposledy.</p>
-            </div>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-cyan-700 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-800">
-              Nahrat automatizaci
-              <input
-                type="file"
-                accept=".json,.yaml,.yml"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  void handleAutomationUpload(file)
-                  event.target.value = ''
-                }}
-              />
-            </label>
-          </div>
-          {uploadNotice && <p className="mb-4 rounded-lg bg-cyan-50 px-3 py-2 text-sm text-cyan-800">{uploadNotice}</p>}
-          <div className="grid gap-4 lg:grid-cols-2">
-            {automations.map((automation) => (
-              <div key={automation.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-base font-semibold text-slate-900">{automation.name}</h3>
-                    <p className="mt-1 text-sm text-slate-600">{getAutomationSummary(automation)}</p>
-                  </div>
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${automation.enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
-                    {automation.enabled ? 'SEPNUTO' : 'NESEPNUTO'}
-                  </span>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
-                  <span className="rounded-full bg-white px-3 py-1">Rezim: {automation.mode === 'auto' ? 'Automaticky' : 'Rucne'}</span>
-                  <span className="rounded-full bg-white px-3 py-1">Zdroj: {automation.source}</span>
-                  <span className="rounded-full bg-white px-3 py-1">Posledni beh: {automation.lastRun}</span>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => toggleAutomation(automation.id)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700">
-                    {automation.enabled ? 'Vypnout' : 'Zapnout'}
-                  </button>
-                  <button type="button" onClick={() => switchAutomationMode(automation.id)} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                    Prepnout rezim
-                  </button>
-                  <button type="button" onClick={() => runAutomationNow(automation.id)} className="rounded-lg bg-cyan-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-800">
-                    Spustit ted
-                  </button>
-                </div>
-              </div>
             ))}
           </div>
         </div>

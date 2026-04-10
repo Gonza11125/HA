@@ -1,0 +1,39 @@
+[
+  {
+    "id": "kotel-levny-tarif-001",
+    "name": "Kotel - topeni pri levnem tarifu",
+    "enabled": true,
+    "mode": "auto",
+    "lastRun": "N/A",
+    "source": "Portal",
+    "description": "Zapne kotel pouze kdyz je povolene topeni podle HDO/levne elektriny.",
+    "entities": {
+      "bojlerSwitch": "switch.shellypro3_ece334ed4534_switch_0",
+      "hdoSwitch": "switch.shellypro3_ece334ed4534_switch_1",
+      "kotelSwitch": "switch.shellypro3_ece334ed4534_switch_2",
+      "roomTemperature": "sensor.shellyhtg3_e4b32332c5e8_temperature",
+      "roomHumidity": "sensor.shellyhtg3_e4b32332c5e8_humidity"
+    },
+    "logic": {
+      "mainCondition": "hdo_switch_is_on",
+      "notes": "Teplotni rizeni zustava v Home Assistant, portal pouze monitoruje stav.",
+      "actions": [
+        "switch.shellypro3_ece334ed4534_switch_2 -> on"
+      ]
+    }
+  },
+  {
+    "id": "kotel-monitor-002",
+    "name": "Monitoring relatek kotle",
+    "enabled": true,
+    "mode": "auto",
+    "lastRun": "N/A",
+    "source": "Portal",
+    "description": "Prehled stavu relatek bojler/HDO/kotel pro diagnostiku automatizace.",
+    "entities": {
+      "bojlerSwitch": "switch.shellypro3_ece334ed4534_switch_0",
+      "hdoSwitch": "switch.shellypro3_ece334ed4534_switch_1",
+      "kotelSwitch": "switch.shellypro3_ece334ed4534_switch_2"
+    }
+  }
+]
