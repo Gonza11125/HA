@@ -37,6 +37,9 @@ interface AgentConfigInput {
   sensors?: string[]
 }
 
+const BINARY_ON_STATES = new Set(['on', 'open', 'true'])
+const BINARY_OFF_STATES = new Set(['off', 'closed', 'false'])
+
 interface DailyEnergyTracker {
   dayKey: string
   baseline: number
@@ -187,6 +190,9 @@ export class DataCollector {
     }
     if (id.includes('temp')) {
       return 'temperature'
+    }
+    if (id.includes('humidity') || id.includes('vlhkost')) {
+      return 'humidity'
     }
 
     return id.replace(/^sensor\./, '').replace(/[^a-z0-9_]/g, '_')
@@ -393,7 +399,18 @@ export class DataCollector {
         
         if (state) {
           try {
-            const parsedValue = Number.parseFloat(state.state)
+            const stateRaw = String(state.state ?? '').trim()
+            const stateNormalized = stateRaw.toLowerCase()
+            let parsedValue = Number.parseFloat(stateRaw)
+
+            if (!Number.isFinite(parsedValue)) {
+              if (BINARY_ON_STATES.has(stateNormalized)) {
+                parsedValue = 1
+              } else if (BINARY_OFF_STATES.has(stateNormalized)) {
+                parsedValue = 0
+              }
+            }
+
             if (!Number.isFinite(parsedValue)) {
               throw new Error('Metric value is not a finite number')
             }

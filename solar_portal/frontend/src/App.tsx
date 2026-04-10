@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import AdminPage from './pages/AdminPage'
+import AutomationPage from './pages/AutomationPage'
 
 function App() {
   const { user } = useAuthStore()
@@ -33,6 +34,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/automation"
+          element={
+            <ProtectedRoute>
+              <AutomationPage />
             </ProtectedRoute>
           }
         />

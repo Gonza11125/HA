@@ -66,6 +66,11 @@ const defaults = {
     entity_energy_today: 'sensor.solar_energy_today_2',
     entity_battery_soc: 'sensor.alpha_ess_soc_battery',
     entity_battery_voltage: 'sensor.alpha_ess_battery_voltage',
+    entity_room_temperature: 'sensor.shellyhtg3_e4b32332c5e8_temperature',
+    entity_room_humidity: 'sensor.shellyhtg3_e4b32332c5e8_humidity',
+    entity_bojler_switch: 'switch.shellypro3_ece334ed4534_switch_0',
+    entity_hdo_switch: 'switch.shellypro3_ece334ed4534_switch_1',
+    entity_kotel_switch: 'switch.shellypro3_ece334ed4534_switch_2',
     entity_grid_import: '',
     entity_grid_export: '',
     entity_home_consumption: '',
@@ -132,6 +137,31 @@ const entityMappings = [
 const batteryVoltage = String(options.entity_battery_voltage || defaults.entity_battery_voltage).trim()
 if (batteryVoltage) {
     entityMappings.push({ type: 'battery_voltage', entityId: batteryVoltage, friendlyName: 'Battery Voltage', unit: 'V' })
+}
+
+const roomTemperature = String(options.entity_room_temperature || defaults.entity_room_temperature).trim()
+if (roomTemperature) {
+    entityMappings.push({ type: 'room_temperature', entityId: roomTemperature, friendlyName: 'Room Temperature', unit: '°C' })
+}
+
+const roomHumidity = String(options.entity_room_humidity || defaults.entity_room_humidity).trim()
+if (roomHumidity) {
+    entityMappings.push({ type: 'room_humidity', entityId: roomHumidity, friendlyName: 'Room Humidity', unit: '%' })
+}
+
+const bojlerSwitch = String(options.entity_bojler_switch || defaults.entity_bojler_switch).trim()
+if (bojlerSwitch) {
+    entityMappings.push({ type: 'bojler_switch', entityId: bojlerSwitch, friendlyName: 'Bojler Switch', unit: 'state' })
+}
+
+const hdoSwitch = String(options.entity_hdo_switch || defaults.entity_hdo_switch).trim()
+if (hdoSwitch) {
+    entityMappings.push({ type: 'hdo_switch', entityId: hdoSwitch, friendlyName: 'HDO Switch', unit: 'state' })
+}
+
+const kotelSwitch = String(options.entity_kotel_switch || defaults.entity_kotel_switch).trim()
+if (kotelSwitch) {
+    entityMappings.push({ type: 'kotel_switch', entityId: kotelSwitch, friendlyName: 'Kotel Switch', unit: 'state' })
 }
 
 const gridImport = String(options.entity_grid_import || defaults.entity_grid_import).trim()

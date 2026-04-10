@@ -28,6 +28,7 @@ export interface DashboardData {
   hasGridImport: boolean
   hasGridExport: boolean
   hasHomeConsumption: boolean
+  rawMetrics?: Record<string, number | string>
 }
 
 export const useDashboardStore = () => {

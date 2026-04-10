@@ -18,6 +18,7 @@ interface LiveData {
   hasGridImport: boolean
   hasGridExport: boolean
   hasHomeConsumption: boolean
+  rawMetrics: Record<string, number | string>
 }
 
 interface HistoryPoint {
@@ -61,6 +62,7 @@ let liveData: LiveData = {
   hasGridImport: false,
   hasGridExport: false,
   hasHomeConsumption: false,
+  rawMetrics: {},
 }
 
 const HISTORY_RETENTION_HOURS = 24 * 30
@@ -152,6 +154,7 @@ export function updateLiveDataFromAgent(payload: AgentPushPayload): void {
     hasGridImport,
     hasGridExport,
     hasHomeConsumption,
+    rawMetrics: { ...metrics },
   }
 
   history.push({
