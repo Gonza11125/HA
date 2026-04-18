@@ -146,9 +146,10 @@ async function main() {
 
     // Step 4: Backend URL
     console.log('🌐 STEP 4/5: Backend Connection\n')
-    console.log('Enter the URL of your Solar Portal backend:')
-    console.log('  - For local development: http://localhost:5000')
-    console.log('  - For production: https://yourdomain.com\n')
+    console.log('Enter the public URL of your Solar Portal backend or reverse proxy:')
+    console.log('  - Recommended production setup: https://yourdomain.com')
+    console.log('  - Local network testing: http://192.168.1.50:5000')
+    console.log('  - Local development only: http://localhost:5000\n')
     
     let backendUrl = await question(rl, 'Backend URL: ')
     backendUrl = backendUrl.replace(/\/$/, '')

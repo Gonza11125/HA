@@ -1,4 +1,7 @@
 import { Router, Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import { getCookieDomain, getCookieSameSite, getSessionSecret, shouldUseSecureCookies } from '../config/runtime';
+import { authRateLimiter } from '../middleware/rateLimiter';
 import { logger } from '../utils/logger';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -17,6 +20,7 @@ interface SessionUser {
   fullName?: string;
   role: 'customer' | 'admin';
   iat: number;
+  exp?: number;
 }
 
 const AUTH_STATE_PATH = process.env.AUTH_STATE_FILE || '/data/auth-state.json';
@@ -119,13 +123,19 @@ function recordAttempt(valid: boolean): void {
 }
 
 function encodeSessionToken(user: SessionUser): string {
-  return Buffer.from(JSON.stringify(user)).toString('base64');
+  return jwt.sign(user, getSessionSecret(), {
+    expiresIn: '12h'
+  });
 }
 
 function decodeSessionToken(token: string): SessionUser | null {
   try {
-    const decoded = Buffer.from(token, 'base64').toString('utf-8');
-    const user = JSON.parse(decoded) as SessionUser;
+    const parsed = jwt.verify(token, getSessionSecret());
+    if (typeof parsed !== 'object' || parsed === null) {
+      return null;
+    }
+
+    const user = parsed as SessionUser;
     if (!user.userId || !user.role) {
       return null;
     }
@@ -133,6 +143,17 @@ function decodeSessionToken(token: string): SessionUser | null {
   } catch {
     return null;
   }
+}
+
+function getSessionCookieOptions() {
+  const cookieDomain = getCookieDomain();
+
+  return {
+    httpOnly: true,
+    secure: shouldUseSecureCookies(),
+    sameSite: getCookieSameSite() as 'lax' | 'strict' | 'none',
+    ...(cookieDomain ? { domain: cookieDomain } : {})
+  };
 }
 
 router.get('/registration-status', async (_req: Request, res: Response) => {
@@ -159,7 +180,7 @@ router.get('/password-info', async (_req: Request, res: Response) => {
 });
 
 // POST /api/auth/register
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', authRateLimiter, async (req: Request, res: Response) => {
   try {
     const existingState = loadAuthState();
     if (existingState) {
@@ -187,7 +208,7 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
   try {
     const { accessCode, rememberMe } = req.body;
     const state = loadAuthState();
@@ -224,13 +245,14 @@ router.post('/login', async (req: Request, res: Response) => {
       role: 'customer',
       iat: Math.floor(Date.now() / 1000)
     };
-    const token = encodeSessionToken(user);
+    const token = jwt.sign(user, getSessionSecret(), {
+      expiresIn: rememberMe ? '24h' : '12h'
+    });
+    const cookieOptions = getSessionCookieOptions();
 
     const maxAge = rememberMe ? 24 * 60 * 60 * 1000 : undefined;
     res.cookie('accessToken', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      ...cookieOptions,
       maxAge
     });
 
@@ -273,9 +295,10 @@ router.get('/me', async (req: Request, res: Response) => {
 // POST /api/auth/logout
 router.post('/logout', async (req: Request, res: Response) => {
   try {
+    const cookieOptions = getSessionCookieOptions();
     // Clear authentication cookies
-    res.clearCookie('accessToken', { httpOnly: true, sameSite: 'strict' });
-    res.clearCookie('refreshToken', { httpOnly: true, sameSite: 'strict' });
+    res.clearCookie('accessToken', cookieOptions);
+    res.clearCookie('refreshToken', cookieOptions);
     logger.info('User logged out');
     return res.json({ message: 'Odhlášení úspěšné' });
   } catch (error) {

@@ -24,9 +24,15 @@ export const Header = () => {
     return () => clearInterval(interval)
   }, [])
 
-  const handleLogout = () => {
-    logout()
-    navigate("/login")
+  const handleLogout = async () => {
+    try {
+      await apiClient.post("/auth/logout")
+    } catch {
+      // Clear local auth state even when the server-side cookie is already gone.
+    } finally {
+      logout()
+      navigate("/login")
+    }
   }
 
   return (

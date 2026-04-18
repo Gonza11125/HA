@@ -1,8 +1,13 @@
 import { Router, Request, Response } from 'express';
+import { apiRateLimiter } from '../middleware/rateLimiter';
+import { authenticate } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { getConnectionStatus, getHistory, getLiveData } from '../services/liveDataStore';
 
 const router = Router();
+
+router.use(authenticate);
+router.use(apiRateLimiter);
 
 // GET /api/data/current - Get current real-time data
 router.get('/current', async (req: Request, res: Response) => {

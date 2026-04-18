@@ -5,6 +5,7 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { initializeDatabase } from "./config/database";
+import { getBackendHost, isStrictCorsEnabled, validateRuntimeConfig } from "./config/runtime";
 import { errorHandler } from "./middleware/errorHandler";
 import { rateLimiter } from "./middleware/rateLimiter";
 import { logger } from "./utils/logger";
@@ -22,9 +23,20 @@ import dataRoutes from "./routes/data";
 dotenv.config();
 
 const app: Express = express();
-const PORT = process.env.BACKEND_PORT || 5000;
+const PORT = parseInt(process.env.BACKEND_PORT || "5000", 10);
+const HOST = getBackendHost();
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
+
+const localNetworkPattern = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
+
+const isDevelopmentOrigin = (origin: string): boolean => {
+  return (
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("http://127.0.0.1:") ||
+    localNetworkPattern.test(origin)
+  );
+};
 
 const getAllowedCorsOrigins = (): Set<string> => {
   const raw = process.env.CORS_ORIGIN || "";
@@ -41,39 +53,31 @@ const allowedCorsOrigins = getAllowedCorsOrigins();
 // ============== Middleware ==============
 
 // Security
+app.set("trust proxy", 1);
 app.use(helmet());
 
-// CORS configuration - allow localhost and local network IPs
+// CORS configuration - strict in production, permissive only for local development
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Allow requests with no origin (like mobile apps or Postman)
     if (!origin) {
       return callback(null, true);
     }
-    
-    // Allow localhost for development
-    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+
+    const normalizedOrigin = trimTrailingSlash(origin);
+    if (allowedCorsOrigins.has(normalizedOrigin)) {
       return callback(null, true);
     }
-    
-    // Allow local network IPs (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
-    const localNetworkPattern = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
-    if (localNetworkPattern.test(origin)) {
+
+    if (!isStrictCorsEnabled() && isDevelopmentOrigin(normalizedOrigin)) {
       return callback(null, true);
     }
-    
-    // Allow custom CORS_ORIGIN values from environment (comma-separated supported)
-    if (allowedCorsOrigins.has(trimTrailingSlash(origin))) {
-      return callback(null, true);
-    }
-    
-    // Reject all other origins
+
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Token']
 };
 app.use(cors(corsOptions));
 
@@ -120,14 +124,16 @@ app.use(errorHandler);
 // ============== Database & Server Initialization ==============
 async function startServer() {
   try {
+    validateRuntimeConfig();
+
     // Initialize database
     logger.info("Initializing database...");
     await initializeDatabase();
     logger.info("Database initialized successfully");
 
     // Start server
-    app.listen(PORT, () => {
-      logger.info(`Server running on port ${PORT}`);
+    app.listen(PORT, HOST, () => {
+      logger.info(`Server running on ${HOST}:${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || "development"}`);
     });
   } catch (error) {

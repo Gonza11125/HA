@@ -1,5 +1,8 @@
 import express, { Router, Request, Response } from 'express';
-import { authenticateDevice } from '../middleware/authentication';
+import crypto from 'crypto';
+import { getJwtSecret } from '../config/runtime';
+import { authRateLimiter } from '../middleware/rateLimiter';
+import { authenticate, authenticateDevice, AuthRequest } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
@@ -7,8 +10,10 @@ import { updateLiveDataFromAgent } from '../services/liveDataStore';
 import fs from 'fs';
 
 const router = Router();
-const DEFAULT_PAIRING_CODE = '150N6E';
 const AGENT_CONFIG_PATH = '/data/agent-config.json';
+const PAIRING_STATE_PATH = process.env.PAIRING_STATE_FILE || '/data/pairing-state.json';
+const PAIRING_CODE_TTL_MS = parseInt(process.env.PAIRING_CODE_TTL_MS || '600000', 10);
+const PAIRING_CODE_SALT = process.env.PAIRING_CODE_SALT || 'solar-portal-pairing-salt';
 
 interface AutomationConfig {
   id: string;
@@ -47,20 +52,108 @@ function getAutomationsFromAgentConfig(): AutomationConfig[] {
   }
 }
 
-function getPairingCode(): string {
-  return DEFAULT_PAIRING_CODE;
+interface PairedDevice {
+  deviceId: string;
+  deviceToken?: string;
+  pairingCode?: string;
+  pairedAt: string;
+  lastSyncAt?: string | null;
+  status: 'connecting' | 'connected';
+}
+
+interface PairingState {
+  codeHash: string;
+  expiresAt: string;
+  createdAt: string;
 }
 
 // Mock device storage
-const pairedDevices = new Map<string, any>();
+const pairedDevices = new Map<string, PairedDevice>();
 
-// GET /api/agent/pairing-code - Get stable pairing code for current installation
-router.get('/pairing-code', async (_req: Request, res: Response) => {
-  return res.json({ pairingCode: getPairingCode() });
+function normalizePairingCode(value: string): string {
+  return String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+}
+
+function createPairingCode(length = 8): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = '';
+  for (let index = 0; index < length; index += 1) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+}
+
+function hashPairingCode(pairingCode: string): string {
+  return crypto.createHash('sha256').update(`${PAIRING_CODE_SALT}:${normalizePairingCode(pairingCode)}`).digest('hex');
+}
+
+function ensureStateDirectory(filePath: string): void {
+  const directory = filePath.substring(0, filePath.lastIndexOf('/'));
+  if (directory && !fs.existsSync(directory)) {
+    fs.mkdirSync(directory, { recursive: true });
+  }
+}
+
+function loadPairingState(): PairingState | null {
+  try {
+    if (!fs.existsSync(PAIRING_STATE_PATH)) {
+      return null;
+    }
+
+    const raw = fs.readFileSync(PAIRING_STATE_PATH, 'utf-8');
+    const parsed = JSON.parse(raw) as PairingState;
+    if (!parsed?.codeHash || !parsed?.expiresAt || !parsed?.createdAt) {
+      return null;
+    }
+
+    if (Date.parse(parsed.expiresAt) <= Date.now()) {
+      clearPairingState();
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    logger.warn('Failed to load pairing state', error);
+    return null;
+  }
+}
+
+function savePairingState(state: PairingState): void {
+  ensureStateDirectory(PAIRING_STATE_PATH);
+  fs.writeFileSync(PAIRING_STATE_PATH, JSON.stringify(state, null, 2), 'utf-8');
+}
+
+function clearPairingState(): void {
+  try {
+    if (fs.existsSync(PAIRING_STATE_PATH)) {
+      fs.unlinkSync(PAIRING_STATE_PATH);
+    }
+  } catch (error) {
+    logger.warn('Failed to clear pairing state', error);
+  }
+}
+
+function issuePairingCode(): { pairingCode: string; expiresAt: string } {
+  const pairingCode = createPairingCode();
+  const expiresAt = new Date(Date.now() + PAIRING_CODE_TTL_MS).toISOString();
+
+  savePairingState({
+    codeHash: hashPairingCode(pairingCode),
+    expiresAt,
+    createdAt: new Date().toISOString()
+  });
+
+  return { pairingCode, expiresAt };
+}
+
+// GET /api/agent/pairing-code - Generate short-lived pairing code for current installation
+router.get('/pairing-code', authenticate, async (_req: Request, res: Response) => {
+  const { pairingCode, expiresAt } = issuePairingCode();
+  return res.json({ pairingCode, expiresAt });
 });
 
 // POST /api/agent/pair - Pair a new Raspberry Pi device
-router.post('/pair', async (req: Request, res: Response) => {
+router.post('/pair', authRateLimiter, async (req: Request, res: Response) => {
   try {
     const { pairingCode } = req.body;
 
@@ -68,8 +161,12 @@ router.post('/pair', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Párovací kód je povinný' });
     }
 
-    const expectedPairingCode = getPairingCode();
-    if (String(pairingCode).trim().toUpperCase() !== expectedPairingCode) {
+    const pairingState = loadPairingState();
+    if (!pairingState) {
+      return res.status(410).json({ error: 'Párovací kód chybí nebo vypršel. Vygenerujte nový v portálu.' });
+    }
+
+    if (hashPairingCode(String(pairingCode)) !== pairingState.codeHash) {
       return res.status(400).json({ error: 'Neplatný párovací kód' });
     }
 
@@ -79,7 +176,7 @@ router.post('/pair', async (req: Request, res: Response) => {
         deviceId,
         siteId: 'demo-site'
       },
-      process.env.JWT_SECRET || 'secret',
+      getJwtSecret(),
       {
         expiresIn: '365d'
       }
@@ -91,10 +188,11 @@ router.post('/pair', async (req: Request, res: Response) => {
       pairingCode,
       pairedAt: new Date().toISOString(),
       lastSyncAt: null,
-      status: 'connecting'
+      status: 'connecting' as const
     };
 
     pairedDevices.set(deviceId, device);
+  clearPairingState();
     logger.info(`Device paired: ${deviceId}`);
 
     return res.status(201).json({
@@ -109,7 +207,7 @@ router.post('/pair', async (req: Request, res: Response) => {
 });
 
 // GET /api/agent/status - Get device status
-router.get('/status', async (req: Request, res: Response) => {
+router.get('/status', authenticate, async (req: Request, res: Response) => {
   try {
     const mockStatus = {
       isPaired: pairedDevices.size > 0,
@@ -127,7 +225,7 @@ router.get('/status', async (req: Request, res: Response) => {
 });
 
 // POST /api/agent/unpair - Unpair a device
-router.post('/unpair', async (req: Request, res: Response) => {
+router.post('/unpair', authenticate, async (req: Request, res: Response) => {
   try {
     const { deviceId } = req.body;
 
@@ -144,18 +242,17 @@ router.post('/unpair', async (req: Request, res: Response) => {
 });
 
 // POST /api/agent/push - Agent pushes real-time data
-router.post('/push', authenticateDevice, async (req: Request, res: Response) => {
+router.post('/push', authenticateDevice, async (req: AuthRequest, res: Response) => {
   try {
-    const { timestamp, metrics, health } = req.body;
+    const { timestamp, metrics } = req.body;
 
     if (!timestamp || !metrics) {
       return res.status(400).json({ error: 'Chybí povinná pole' });
     }
 
-    const deviceRequest = req as Request & { device?: { id: string } };
-    if (deviceRequest.device?.id && !pairedDevices.has(deviceRequest.device.id)) {
-      pairedDevices.set(deviceRequest.device.id, {
-        deviceId: deviceRequest.device.id,
+    if (req.device?.id && !pairedDevices.has(req.device.id)) {
+      pairedDevices.set(req.device.id, {
+        deviceId: req.device.id,
         pairedAt: new Date().toISOString(),
         status: 'connected'
       });
@@ -171,7 +268,7 @@ router.post('/push', authenticateDevice, async (req: Request, res: Response) => 
 });
 
 // GET /api/agent/config - Get agent configuration
-router.get('/config', async (req: Request, res: Response) => {
+router.get('/config', authenticate, async (req: Request, res: Response) => {
   try {
     const haAutomations = getAutomationsFromAgentConfig();
     const config = {
@@ -194,7 +291,7 @@ router.get('/config', async (req: Request, res: Response) => {
 });
 
 // POST /api/agent/ping - Health check from agent
-router.post('/ping', async (req: Request, res: Response) => {
+router.post('/ping', authenticateDevice, async (req: Request, res: Response) => {
   try {
     return res.json({
       status: 'ok',

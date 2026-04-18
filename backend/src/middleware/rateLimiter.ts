@@ -2,10 +2,12 @@ import { Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { logger } from '../utils/logger';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 // Global rate limiter
 export const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // limit each IP to 500 requests per windowMs (increased for normal usage)
+  max: isProduction ? 150 : 500,
   message: 'Příliš mnoho požadavků z této IP adresy. Zkuste to prosím později.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -24,7 +26,7 @@ export const rateLimiter = rateLimit({
 // Auth endpoints rate limiter (stricter)
 export const authRateLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_AUTH_MAX_REQUESTS || '200'), // 200 attempts (enough for normal usage)
+  max: parseInt(process.env.RATE_LIMIT_AUTH_MAX_REQUESTS || (isProduction ? '10' : '50')),
   message: 'Příliš mnoho pokusů o přihlášení. Zkuste to prosím později.',
   standardHeaders: false,
   legacyHeaders: false,
@@ -40,7 +42,7 @@ export const authRateLimiter = rateLimit({
 // API rate limiter (moderate)
 export const apiRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 300, // 300 requests per minute (increased for dashboard polling)
+  max: isProduction ? 120 : 300,
   standardHeaders: false,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {

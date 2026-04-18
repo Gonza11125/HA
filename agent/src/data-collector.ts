@@ -119,15 +119,17 @@ export class DataCollector {
   }
 
   private normalizeCloudUrl(inputUrl?: string): string {
-    const defaultUrl = 'http://localhost:5000/api'
-    if (!inputUrl || typeof inputUrl !== 'string') {
-      return defaultUrl
+    const configuredUrl = [
+      inputUrl,
+      process.env.CLOUD_API_URL,
+      process.env.BACKEND_URL,
+    ].find((value) => typeof value === 'string' && value.trim().length > 0)
+
+    if (!configuredUrl || typeof configuredUrl !== 'string') {
+      throw new Error('Cloud API URL is required. Set cloudUrl/backendUrl in config.json or CLOUD_API_URL in the environment.')
     }
 
-    const trimmedUrl = inputUrl.trim().replace(/\/+$/, '')
-    if (!trimmedUrl) {
-      return defaultUrl
-    }
+    const trimmedUrl = configuredUrl.trim().replace(/\/+$/, '')
 
     if (trimmedUrl.endsWith('/api')) {
       return trimmedUrl
