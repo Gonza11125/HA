@@ -10,6 +10,20 @@ function parseBooleanEnv(value: string | undefined): boolean {
   return String(value || '').trim().toLowerCase() === 'true';
 }
 
+function parseOptionalBooleanEnv(value: string | undefined): boolean | undefined {
+  const normalizedValue = String(value || '').trim().toLowerCase();
+
+  if (normalizedValue === 'true') {
+    return true;
+  }
+
+  if (normalizedValue === 'false') {
+    return false;
+  }
+
+  return undefined;
+}
+
 export function isProductionEnvironment(): boolean {
   return process.env.NODE_ENV === 'production';
 }
@@ -24,7 +38,13 @@ export function isStrictCorsEnabled(): boolean {
 }
 
 export function shouldUseSecureCookies(): boolean {
-  return isProductionEnvironment() || parseBooleanEnv(process.env.COOKIE_SECURE);
+  const configuredValue = parseOptionalBooleanEnv(process.env.COOKIE_SECURE);
+
+  if (configuredValue !== undefined) {
+    return configuredValue;
+  }
+
+  return isProductionEnvironment();
 }
 
 export function getCookieSameSite(): 'lax' | 'strict' | 'none' {
@@ -98,6 +118,10 @@ export function validateRuntimeConfig(): void {
 
   getJwtSecret();
   getSessionSecret();
+
+  if (isProductionEnvironment() && !shouldUseSecureCookies()) {
+    logger.warn('COOKIE_SECURE=false in production. Only use this for trusted private deployments such as WireGuard or another VPN.');
+  }
 
   if (shouldUseSecureCookies() && corsOrigin) {
     const insecureOrigins = corsOrigin

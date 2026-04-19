@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: solar_portal_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:-solar_portal}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-solar_portal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - solar_portal_network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: solar_portal_backend
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 5000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-solar_portal}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      DB_NAME: ${POSTGRES_DB:-solar_portal}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:?REFRESH_TOKEN_SECRET must be set}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must be set}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAME_SITE: ${COOKIE_SAME_SITE:-lax}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      CORS_ORIGIN: ${VPN_PORTAL_ORIGIN:?VPN_PORTAL_ORIGIN must be set}
+      STRICT_CORS: 'true'
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      AUTH_STATE_FILE: /data/auth-state.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - backend_data:/data
+    expose:
+      - '5000'
+    networks:
+      - solar_portal_network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: solar_portal_frontend
+    depends_on:
+      - backend
+    expose:
+      - '3000'
+    networks:
+      - solar_portal_network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: solar_portal_nginx
+    depends_on:
+      - frontend
+      - backend
+    ports:
+      - '${PORTAL_HTTP_PORT:-80}:80'
+    volumes:
+      - ./nginx.wireguard.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - solar_portal_network
+    restart: unless-stopped
+
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: solar_portal_wireguard
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      PUID: ${WG_PUID:-1000}
+      PGID: ${WG_PGID:-1000}
+      TZ: ${TZ:-UTC}
+      SERVERURL: ${WG_SERVER_URL:?WG_SERVER_URL must be set}
+      SERVERPORT: ${WG_SERVER_PORT:-51820}
+      PEERS: ${WG_PEERS:-3}
+      PEERDNS: ${WG_PEER_DNS:-1.1.1.1}
+      INTERNAL_SUBNET: ${WG_INTERNAL_SUBNET:-10.13.13.0}
+      ALLOWEDIPS: ${WG_ALLOWED_IPS:-10.13.13.0/24}
+      LOG_CONFS: 'true'
+      PERSISTENTKEEPALIVE_PEERS: ${WG_PERSISTENT_KEEPALIVE:-25}
+    volumes:
+      - ./wireguard-config:/config
+      - /lib/modules:/lib/modules:ro
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    restart: unless-stopped
+
+networks:
+  solar_portal_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  backend_data:
+    driver: local

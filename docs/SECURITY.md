@@ -259,6 +259,17 @@ server {
 }
 ```
 
+### Private VPN Deployments
+
+For a private WireGuard-only deployment, transport encryption can be delegated to the VPN tunnel instead of public HTTPS.
+
+Rules for that exception:
+
+- only expose the WireGuard UDP port publicly
+- keep web ports off the public router or firewall
+- set `COOKIE_SECURE=false` only for the private VPN origin
+- never reuse this mode for a public domain or public IP deployment
+
 ### Headers Security
 
 ```typescript

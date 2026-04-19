@@ -4,6 +4,40 @@ You do not need to buy a domain on day one.
 
 There are two practical paths:
 
+## Option 0: Private Access With WireGuard On Your Home Server
+
+Use this when Solar Portal runs on your own 24/7 server at home and users should only reach it through VPN.
+
+Why this option is attractive:
+
+- no public website on ports `80` and `443`
+- no domain required
+- stable private portal address such as `http://10.13.13.1`
+- remote users only see the portal after joining the VPN
+
+Recommended setup:
+
+1. Run Solar Portal on the home server.
+2. Run WireGuard on the same server.
+3. Forward only UDP `51820` from the router.
+4. Give each trusted device its own WireGuard peer config.
+5. Open the portal through the WireGuard server address.
+
+Environment notes:
+
+```env
+VPN_PORTAL_ORIGIN=http://10.13.13.1
+COOKIE_SECURE=false
+COOKIE_SAME_SITE=lax
+STRICT_CORS=true
+VITE_API_BASE_URL=/api
+CLOUD_API_URL=http://10.13.13.1/api
+```
+
+Detailed guide:
+
+- [WIREGUARD_HOME_SERVER.md](WIREGUARD_HOME_SERVER.md)
+
 ## Option 1: Private Access With Tailscale
 
 Use this when only you or a small trusted group need access.
@@ -86,6 +120,7 @@ Avoid these shortcuts:
 
 ## Recommended Order
 
-1. Start with Tailscale if access is only for you.
-2. Use Cloudflare Quick Tunnel if you need temporary public HTTPS.
-3. Move to your own domain only when you want a stable public customer-facing URL.
+1. Start with WireGuard if you already have a home server and want fully private remote access.
+2. Use Tailscale if you want the simplest VPN setup with less manual network work.
+3. Use Cloudflare Quick Tunnel if you need temporary public HTTPS.
+4. Move to your own domain only when you want a stable public customer-facing URL.

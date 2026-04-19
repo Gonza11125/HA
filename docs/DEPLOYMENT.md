@@ -5,10 +5,15 @@ Production deployment of Solar Portal on VPS/Server.
 This repository now ships with a dedicated production stack:
 
 - [docker-compose.prod.yml](../docker-compose.prod.yml) for VPS deployment
+- [docker-compose.wireguard.yml](../docker-compose.wireguard.yml) for private home-server deployment over WireGuard
 - [nginx.conf](../nginx.conf) for HTTPS reverse proxying
+- [nginx.wireguard.conf](../nginx.wireguard.conf) for private HTTP reverse proxying inside WireGuard
 - [NO_DOMAIN_REMOTE_ACCESS.md](NO_DOMAIN_REMOTE_ACCESS.md) for secure access without buying a domain yet
+- [WIREGUARD_HOME_SERVER.md](WIREGUARD_HOME_SERVER.md) for the dedicated WireGuard setup
 
 Keep [docker-compose.yml](../docker-compose.yml) for local development. Do not repurpose it for internet-facing production.
+
+If you already have a home server and want the portal reachable only after VPN login, use [WIREGUARD_HOME_SERVER.md](WIREGUARD_HOME_SERVER.md) instead of the public HTTPS flow below.
 
 ## Prerequisites
 
