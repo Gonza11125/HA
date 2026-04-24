@@ -1,6 +1,8 @@
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useAuthStore } from './hooks/useAuthStore'
 import ProtectedRoute from './components/ProtectedRoute'
+import { apiClient } from './utils/api'
 
 // Pages
 import { LoginPage } from './pages/LoginPage'
@@ -11,7 +13,15 @@ import AdminPage from './pages/AdminPage'
 import AutomationPage from './pages/AutomationPage'
 
 function App() {
-  const { user } = useAuthStore()
+  const { user, setUser } = useAuthStore()
+
+  // Restore session from HTTP-only cookie on every full page load
+  useEffect(() => {
+    if (user) return
+    apiClient.get('/auth/me')
+      .then(({ data }) => setUser(data.user))
+      .catch(() => { /* not logged in, stay on public routes */ })
+  }, [])
 
   return (
     <Router>
