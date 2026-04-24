@@ -226,11 +226,15 @@ router.post('/login', async (req: Request, res: Response) => {
     };
     const token = encodeSessionToken(user);
 
-    const maxAge = rememberMe ? 24 * 60 * 60 * 1000 : undefined;
+    const maxAge = rememberMe ? 24 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000;
+    // Use actual HTTPS detection – not NODE_ENV – because HA addons run over HTTP
+    // even in production. Forcing secure:true over HTTP causes browsers to silently
+    // drop the cookie on every subsequent request, making all auth endpoints fail.
+    const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('accessToken', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isHttps,
+      sameSite: 'lax',
       maxAge
     });
 
