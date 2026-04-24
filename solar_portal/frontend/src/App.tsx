@@ -13,14 +13,22 @@ import AdminPage from './pages/AdminPage'
 import AutomationPage from './pages/AutomationPage'
 
 function App() {
-  const { user, setUser } = useAuthStore()
+  const { user, setUser, setSessionChecked } = useAuthStore()
 
-  // Restore session from HTTP-only cookie on every full page load
+  // On every page load: if user already in sessionStorage mark checked immediately,
+  // otherwise try to restore from HTTP-only cookie via /me.
   useEffect(() => {
-    if (user) return
+    const currentUser = useAuthStore.getState().user
+    if (currentUser) {
+      setSessionChecked(true)
+      return
+    }
     apiClient.get('/auth/me')
-      .then(({ data }) => setUser(data.user))
-      .catch(() => { /* not logged in, stay on public routes */ })
+      .then(({ data }) => {
+        setUser(data.user)
+        setSessionChecked(true)
+      })
+      .catch(() => setSessionChecked(true))
   }, [])
 
   return (

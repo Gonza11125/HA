@@ -7,7 +7,12 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
-  const { user } = useAuthStore()
+  const { user, isSessionChecked } = useAuthStore()
+
+  // Wait for session check before redirecting – avoids false logout on page load
+  if (!isSessionChecked) {
+    return null
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />
