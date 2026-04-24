@@ -12,6 +12,7 @@ export const LoginPage = () => {
   const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(null)
   const navigate = useNavigate()
   const { setUser } = useAuthStore()
+  const { setToken } = useAuthStore()
 
   useEffect(() => {
     const loadData = async () => {
@@ -40,6 +41,7 @@ export const LoginPage = () => {
 
       // Set user in store
       setUser(data.user)
+      if (data.token) setToken(data.token)
 
       // Redirect to dashboard
       navigate('/dashboard')

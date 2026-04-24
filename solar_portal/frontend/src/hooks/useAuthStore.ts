@@ -10,8 +10,10 @@ interface User {
 
 interface AuthStore {
   user: User | null
+  token: string | null
   isSessionChecked: boolean
   setUser: (user: User | null) => void
+  setToken: (token: string | null) => void
   setSessionChecked: (checked: boolean) => void
   logout: () => void
 }
@@ -20,16 +22,18 @@ export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
       user: null,
+      token: null,
       isSessionChecked: false,
       setUser: (user) => set({ user }),
+      setToken: (token) => set({ token }),
       setSessionChecked: (isSessionChecked) => set({ isSessionChecked }),
-      logout: () => set({ user: null, isSessionChecked: true }),
+      logout: () => set({ user: null, token: null, isSessionChecked: true }),
     }),
     {
       name: 'solar-portal-auth',
-      // Only persist user – isSessionChecked always starts false on page load
+      // Persist both user and token so requests work after page reload
       storage: createJSONStorage(() => sessionStorage),
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({ user: state.user, token: state.token }),
     },
   ),
 )

@@ -17,7 +17,8 @@ export interface AuthRequest extends Request {
 
 export function authenticate(req: AuthRequest, res: Response, next: NextFunction): void {
   try {
-    const token = req.cookies.accessToken || extractTokenFromHeader(req);
+    // Authorization header takes priority over cookie so HTTP local-network setups work
+    const token = extractTokenFromHeader(req) || req.cookies?.accessToken;
 
     if (!token) {
       res.status(401).json({ error: 'Chybí autentizační token' });

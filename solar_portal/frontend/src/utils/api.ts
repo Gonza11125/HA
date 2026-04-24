@@ -56,9 +56,25 @@ export const apiClient = axios.create({
   }
 })
 
-// 401 responses are handled by ProtectedRoute + useAuthStore (App.tsx /me check).
-// No redirect here – an aggressive global redirect was the root cause of being
-// kicked to login when navigating to the Automation page.
+// Inject Authorization header from stored token on every request.
+// This avoids relying on cookies which break over HTTP on cross-port/cross-origin setups.
+apiClient.interceptors.request.use((config) => {
+  // Dynamically import to avoid circular dependency at module load time
+  const stored = sessionStorage.getItem('solar-portal-auth')
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored)
+      const token: string | null = parsed?.state?.token ?? null
+      if (token) {
+        config.headers.set('Authorization', `Bearer ${token}`)
+      }
+    } catch {
+      // ignore malformed sessionStorage
+    }
+  }
+  return config
+})
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => Promise.reject(error)

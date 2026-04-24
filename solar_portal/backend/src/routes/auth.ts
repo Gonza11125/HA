@@ -242,6 +242,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     return res.json({
       message: 'Přihlášení úspěšné',
+      token,
       user: {
         id: user.userId,
         role: user.role,
@@ -255,7 +256,13 @@ router.post('/login', async (req: Request, res: Response) => {
 });
 
 router.get('/me', async (req: Request, res: Response) => {
-  const token = req.cookies?.accessToken;
+  // Accept token from Authorization header (primary) or cookie (fallback)
+  let token = req.cookies?.accessToken;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  }
+
   if (!token) {
     return res.status(401).json({ error: 'Nejste přihlášen' });
   }
@@ -266,6 +273,7 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 
   return res.json({
+    token,
     user: {
       id: user.userId,
       role: user.role,

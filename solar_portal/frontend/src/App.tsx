@@ -13,7 +13,7 @@ import AdminPage from './pages/AdminPage'
 import AutomationPage from './pages/AutomationPage'
 
 function App() {
-  const { user, setUser, setSessionChecked } = useAuthStore()
+  const { user, setUser, setToken, setSessionChecked } = useAuthStore()
 
   // On every page load: if user already in sessionStorage mark checked immediately,
   // otherwise try to restore from HTTP-only cookie via /me.
@@ -26,6 +26,7 @@ function App() {
     apiClient.get('/auth/me')
       .then(({ data }) => {
         setUser(data.user)
+        if (data.token) setToken(data.token)
         setSessionChecked(true)
       })
       .catch(() => setSessionChecked(true))
