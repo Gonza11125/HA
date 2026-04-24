@@ -4,6 +4,13 @@ import { logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 import { updateLiveDataFromAgent } from '../services/liveDataStore';
+import {
+  claimPendingCommands,
+  completeHACommand,
+  HACommandResult,
+  HAEntityView,
+  syncHAEntities,
+} from '../services/haControlStore';
 
 const router = Router();
 const DEFAULT_PAIRING_CODE = '150N6E';
@@ -131,6 +138,69 @@ router.post('/push', authenticateDevice, async (req: Request, res: Response) => 
   }
 });
 
+// POST /api/agent/entities/sync - Agent syncs latest HA controllable entities
+router.post('/entities/sync', authenticateDevice, async (req: Request, res: Response) => {
+  try {
+    const { entities } = req.body as { entities?: HAEntityView[] };
+    const deviceRequest = req as Request & { device?: { deviceId?: string; siteId?: string; id?: string } };
+    const siteId = deviceRequest.device?.siteId;
+    const deviceId = deviceRequest.device?.deviceId || deviceRequest.device?.id;
+
+    if (!siteId || !deviceId) {
+      return res.status(401).json({ error: 'Neplatný kontext zařízení' });
+    }
+
+    if (!Array.isArray(entities)) {
+      return res.status(400).json({ error: 'Pole entities je povinné' });
+    }
+
+    const count = syncHAEntities({ siteId, deviceId, entities });
+    return res.json({ message: 'Entity byly synchronizovány', count });
+  } catch (error) {
+    logger.error('Entity sync error:', error);
+    return res.status(500).json({ error: 'Synchronizace entit selhala' });
+  }
+});
+
+// GET /api/agent/commands/pending - Agent pulls pending HA commands
+router.get('/commands/pending', authenticateDevice, async (req: Request, res: Response) => {
+  try {
+    const deviceRequest = req as Request & { device?: { deviceId?: string; siteId?: string; id?: string } };
+    const siteId = deviceRequest.device?.siteId;
+    const deviceId = deviceRequest.device?.deviceId || deviceRequest.device?.id;
+
+    if (!siteId || !deviceId) {
+      return res.status(401).json({ error: 'Neplatný kontext zařízení' });
+    }
+
+    const commands = claimPendingCommands(siteId, deviceId);
+    return res.json({ data: commands, count: commands.length });
+  } catch (error) {
+    logger.error('Get pending commands error:', error);
+    return res.status(500).json({ error: 'Nepodařilo se načíst frontu příkazů' });
+  }
+});
+
+// POST /api/agent/commands/:id/result - Agent submits HA command execution result
+router.post('/commands/:id/result', authenticateDevice, async (req: Request, res: Response) => {
+  try {
+    const body = req.body as HACommandResult;
+    if (typeof body.ok !== 'boolean') {
+      return res.status(400).json({ error: 'Pole ok je povinné' });
+    }
+
+    const command = completeHACommand(req.params.id, body);
+    if (!command) {
+      return res.status(404).json({ error: 'Příkaz nebyl nalezen' });
+    }
+
+    return res.json({ data: command, message: 'Výsledek příkazu byl uložen' });
+  } catch (error) {
+    logger.error('Command result error:', error);
+    return res.status(500).json({ error: 'Nepodařilo se uložit výsledek příkazu' });
+  }
+});
+
 // GET /api/agent/config - Get agent configuration
 router.get('/config', async (req: Request, res: Response) => {
   try {
@@ -138,10 +208,14 @@ router.get('/config', async (req: Request, res: Response) => {
       pollingInterval: 5000,
       maxRetries: 3,
       timeout: 15000,
+      controlledDomains: ['automation', 'climate', 'scene', 'script', 'switch'],
       endpoints: {
         auth: '/api/auth/login',
         push: '/api/agent/push',
-        health: '/api/health'
+        health: '/api/health',
+        entitySync: '/api/agent/entities/sync',
+        pendingCommands: '/api/agent/commands/pending',
+        commandResult: '/api/agent/commands/:id/result'
       }
     };
 

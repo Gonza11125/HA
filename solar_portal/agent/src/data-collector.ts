@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import { HAClient } from './ha-client'
-import { CloudClient, DataPayload } from './cloud-client'
+import { CloudClient, DataPayload, HAEntitySyncItem, PendingHACommand } from './cloud-client'
 import { Logger } from './logger'
 
 const logger = new Logger()
@@ -56,6 +56,19 @@ const ENERGY_METRIC_TYPES = new Set([
   'energy_export',
   'daily_energy',
 ])
+
+const CONTROLLED_DOMAINS = new Set(['automation', 'climate', 'scene', 'script', 'switch'])
+
+const ACTION_SERVICE_MAP: Record<string, { domain: string; service: string }> = {
+  'automation:turn_on': { domain: 'automation', service: 'turn_on' },
+  'automation:turn_off': { domain: 'automation', service: 'turn_off' },
+  'automation:trigger': { domain: 'automation', service: 'trigger' },
+  'climate:set_temperature': { domain: 'climate', service: 'set_temperature' },
+  'scene:activate': { domain: 'scene', service: 'turn_on' },
+  'script:run': { domain: 'script', service: 'turn_on' },
+  'switch:turn_on': { domain: 'switch', service: 'turn_on' },
+  'switch:turn_off': { domain: 'switch', service: 'turn_off' },
+}
 
 export class DataCollector {
   private config: AgentConfig
@@ -510,9 +523,108 @@ export class DataCollector {
           logger.warn('Failed to push data to cloud')
         }
       }
+
+      await this.syncControllableEntities()
+      await this.processPendingCommands()
     } catch (error) {
       logger.error('Error in push data:', error)
     }
+  }
+
+  private async syncControllableEntities(): Promise<void> {
+    try {
+      const states = await this.haClient.getAllStates()
+      if (!states) {
+        logger.warn('HA entity sync skipped - Home Assistant states are unavailable')
+        return
+      }
+
+      const entities: HAEntitySyncItem[] = []
+      for (const state of Object.values(states)) {
+        const [domainRaw] = state.entity_id.split('.')
+        if (!CONTROLLED_DOMAINS.has(domainRaw)) {
+          continue
+        }
+
+        entities.push({
+          entityId: state.entity_id,
+          domain: domainRaw as HAEntitySyncItem['domain'],
+          friendlyName: String(state.attributes?.friendly_name || state.entity_id),
+          state: state.state,
+          attributes: state.attributes || {},
+          lastChanged: state.last_changed,
+          lastUpdated: state.last_updated,
+        })
+      }
+
+      if (entities.length === 0) {
+        return
+      }
+
+      const synced = await this.cloudClient.syncEntities(entities)
+      if (!synced) {
+        logger.warn('Failed to sync controllable HA entities to cloud')
+      }
+    } catch (error) {
+      logger.error('Failed to sync controllable entities:', error)
+    }
+  }
+
+  private async processPendingCommands(): Promise<void> {
+    try {
+      const commands = await this.cloudClient.getPendingCommands()
+      if (commands.length === 0) {
+        return
+      }
+
+      for (const command of commands) {
+        await this.executeCommand(command)
+      }
+    } catch (error) {
+      logger.error('Failed to process pending HA commands:', error)
+    }
+  }
+
+  private async executeCommand(command: PendingHACommand): Promise<void> {
+    const serviceKey = `${command.domain}:${command.action}`
+    const service = ACTION_SERVICE_MAP[serviceKey]
+
+    if (!service) {
+      await this.cloudClient.submitCommandResult(command.id, {
+        ok: false,
+        message: `Unsupported action ${command.action} for domain ${command.domain}`,
+      })
+      return
+    }
+
+    const payload = {
+      entity_id: command.entityId,
+      ...command.payload,
+    }
+
+    const ok = await this.haClient.callService(service.domain, service.service, payload)
+    if (!ok) {
+      await this.cloudClient.submitCommandResult(command.id, {
+        ok: false,
+        message: `Service call ${service.domain}.${service.service} failed`,
+      })
+      return
+    }
+
+    const latestState = await this.haClient.getState(command.entityId)
+    await this.cloudClient.submitCommandResult(command.id, {
+      ok: true,
+      message: 'Command executed successfully',
+      updatedEntityState: latestState
+        ? {
+            entityId: latestState.entity_id,
+            state: latestState.state,
+            attributes: latestState.attributes,
+            lastChanged: latestState.last_changed,
+            lastUpdated: latestState.last_updated,
+          }
+        : undefined,
+    })
   }
 
   getConfig(): AgentConfig {

@@ -17,6 +17,7 @@ import agentRoutes from "./routes/agent";
 import adminRoutes from "./routes/admin";
 import healthRoutes from "./routes/health";
 import dataRoutes from "./routes/data";
+import haRoutes from "./routes/ha";
 
 // Load environment variables
 dotenv.config();
@@ -116,6 +117,9 @@ app.use("/api/agent", agentRoutes);
 
 // Data routes (real-time solar data)
 app.use("/api/data", dataRoutes);
+
+// Home Assistant automation routes
+app.use("/api/ha", haRoutes);
 
 // Admin routes (admin role required)
 app.use("/api/admin", adminRoutes);
