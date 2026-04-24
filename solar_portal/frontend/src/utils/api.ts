@@ -56,15 +56,12 @@ export const apiClient = axios.create({
   }
 })
 
-// Add response interceptor for error handling
+// 401 responses are handled by ProtectedRoute + useAuthStore (App.tsx /me check).
+// No redirect here – an aggressive global redirect was the root cause of being
+// kicked to login when navigating to the Automation page.
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      window.location.hash = '#/login'
-    }
-    return Promise.reject(error)
-  }
+  (error) => Promise.reject(error)
 )
 
 export default apiClient
