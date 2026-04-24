@@ -4,6 +4,7 @@ import { MetricCard } from '../components/MetricCard'
 import { Chart } from '../components/Chart'
 import useDashboardStore from '../hooks/useDashboardStore'
 import { apiClient } from '../utils/api'
+import Header from '../components/Header'
 
 type ChartMetric = 'power' | 'energy' | 'battery' | 'gridImport' | 'solarProduction' | 'selfConsumptionPercent'
 type ChartStyle = 'line' | 'bar'
@@ -640,8 +641,9 @@ export const DashboardPage = () => {
 
   if (!isPaired) {
     return (
-      <div className="min-h-screen bg-slate-50 pt-10">
-        <div className="mx-auto max-w-2xl px-4">
+      <div className="min-h-screen bg-slate-50">
+        <Header />
+        <div className="mx-auto max-w-2xl px-4 pt-10">
           <div className="mb-8 text-center">
             <h1 className="mb-2 text-3xl font-bold text-gray-900">Nastaveni Solar Portalu</h1>
             <p className="text-gray-600">Propojte Home Assistant a spustte zivy monitoring.</p>
@@ -670,8 +672,9 @@ export const DashboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff7ed_0%,_#ecfeff_36%,_#f8fafc_70%)] py-8">
-      <div className="mx-auto max-w-7xl px-4">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#fff7ed_0%,_#ecfeff_36%,_#f8fafc_70%)]">
+      <Header />
+      <div className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-6 overflow-hidden rounded-3xl border border-cyan-100 bg-white/90 shadow-sm backdrop-blur">
           <div className="grid gap-6 p-6 lg:grid-cols-[1.3fr_0.7fr]">
             <div>
@@ -690,6 +693,12 @@ export const DashboardPage = () => {
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <p className="text-xs uppercase tracking-wide text-slate-500">Automatizace</p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">Rizeni bezi v Home Assistant</p>
+                  <button
+                    onClick={() => window.location.hash = '#/automation'}
+                    className="mt-2 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                  >
+                    Otevrit automatizace
+                  </button>
                 </div>
               </div>
             </div>
