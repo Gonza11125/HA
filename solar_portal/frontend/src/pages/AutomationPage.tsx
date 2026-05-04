@@ -13,6 +13,9 @@ const FILTERS: Array<{ key: HAFilter; label: string }> = [
 const ACTIVE_STATES = new Set(['on', 'home', 'heat', 'cool', 'running', 'triggered'])
 const INACTIVE_STATES = new Set(['off', 'idle', 'unavailable'])
 
+const AUTOMATION_ON_STATES = new Set(['on'])
+const AUTOMATION_OFF_STATES = new Set(['off'])
+
 const formatRelativeDate = (isoDate?: string) => {
   if (!isoDate) {
     return 'N/A'
@@ -29,6 +32,115 @@ const formatRelativeDate = (isoDate?: string) => {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+const toDate = (value?: string) => {
+  if (!value) {
+    return null
+  }
+
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return null
+  }
+
+  return parsed
+}
+
+const formatLastTriggered = (isoDate?: string) => {
+  const value = toDate(isoDate)
+  if (!value) {
+    return 'Nikdy'
+  }
+
+  const diffMs = Date.now() - value.getTime()
+  if (diffMs < 0) {
+    return formatRelativeDate(value.toISOString())
+  }
+
+  const diffMinutes = Math.floor(diffMs / (1000 * 60))
+  if (diffMinutes < 1) {
+    return 'právě teď'
+  }
+
+  if (diffMinutes < 60) {
+    return `před ${diffMinutes} ${formatCzechMinutes(diffMinutes)}`
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60)
+  if (diffHours < 24) {
+    return `před ${diffHours} ${formatCzechHours(diffHours)}`
+  }
+
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 7) {
+    return `před ${diffDays} dny`
+  }
+
+  return formatRelativeDate(value.toISOString())
+}
+
+const getAutomationEnabledStateLabel = (entity: HAEntityView) => {
+  if (entity.domain !== 'automation') {
+    return entity.state
+  }
+
+  const normalized = entity.state.toLowerCase()
+  if (AUTOMATION_ON_STATES.has(normalized)) {
+    return 'Zapnuto'
+  }
+
+  if (AUTOMATION_OFF_STATES.has(normalized)) {
+    return 'Vypnuto'
+  }
+
+  return entity.state
+}
+
+const getAutomationLastTriggeredValue = (entity: HAEntityView) => {
+  if (entity.domain !== 'automation') {
+    return null
+  }
+
+  const raw = entity.attributes.last_triggered
+  if (typeof raw !== 'string') {
+    return null
+  }
+
+  return raw
+}
+
+const formatCzechMinutes = (value: number) => {
+  if (value === 1) {
+    return 'minutou'
+  }
+
+  if (value >= 2 && value <= 4) {
+    return 'minutami'
+  }
+
+  return 'minutami'
+}
+
+const formatCzechHours = (value: number) => {
+  if (value === 1) {
+    return 'hodinou'
+  }
+
+  if (value >= 2 && value <= 4) {
+    return 'hodinami'
+  }
+
+  return 'hodinami'
+}
+
+const getLastTriggeredDisplay = (entity: HAEntityView) => {
+  const explicitLastTriggered = getAutomationLastTriggeredValue(entity)
+  if (explicitLastTriggered) {
+    return formatLastTriggered(explicitLastTriggered)
+  }
+
+  return formatLastTriggered(entity.lastChanged)
 }
 
 const getStateBadgeClass = (state: string) => {
@@ -211,7 +323,7 @@ export const AutomationPage = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStateBadgeClass(entity.state)}`}>
-                            {entity.state}
+                            {getAutomationEnabledStateLabel(entity)}
                           </span>
                           {commandStatuses[entity.entityId] && (
                             <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
@@ -221,7 +333,11 @@ export const AutomationPage = () => {
                         </div>
                       </div>
 
-                      <p className="mt-2 text-xs text-slate-500">Poslední změna: {formatRelativeDate(entity.lastChanged)}</p>
+                      {entity.domain === 'automation' ? (
+                        <p className="mt-2 text-xs text-slate-500">Naposledy spuštěno: {getLastTriggeredDisplay(entity)}</p>
+                      ) : (
+                        <p className="mt-2 text-xs text-slate-500">Poslední změna: {formatRelativeDate(entity.lastChanged)}</p>
+                      )}
 
                       <div className="mt-3">{renderEntityActions(entity)}</div>
                     </article>
