@@ -143,8 +143,34 @@ const getLastTriggeredDisplay = (entity: HAEntityView) => {
   return formatLastTriggered(entity.lastChanged)
 }
 
-const getStateBadgeClass = (state: string) => {
-  const normalized = state.toLowerCase()
+const getAutomationCurrentRuns = (entity: HAEntityView) => {
+  const raw = entity.attributes.current
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+    return 0
+  }
+
+  return raw
+}
+
+const isAutomationCurrentlyActive = (entity: HAEntityView) => {
+  if (entity.domain !== 'automation') {
+    return false
+  }
+
+  const state = entity.state.toLowerCase()
+  if (state === 'triggered' || state === 'running') {
+    return true
+  }
+
+  return getAutomationCurrentRuns(entity) > 0
+}
+
+const getEntityStateBadgeClass = (entity: HAEntityView) => {
+  if (entity.domain === 'automation') {
+    return isAutomationCurrentlyActive(entity) ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'
+  }
+
+  const normalized = entity.state.toLowerCase()
   if (ACTIVE_STATES.has(normalized)) {
     return 'bg-emerald-100 text-emerald-700'
   }
@@ -160,6 +186,14 @@ const getStateBadgeClass = (state: string) => {
   return 'bg-amber-100 text-amber-800'
 }
 
+const getEntityStateLabel = (entity: HAEntityView) => {
+  if (entity.domain === 'automation') {
+    return isAutomationCurrentlyActive(entity) ? 'Aktivní' : 'Neaktivní'
+  }
+
+  return entity.state
+}
+
 const matchesFilter = (entity: HAEntityView, filter: HAFilter) => {
   if (filter === 'all') {
     return true
@@ -167,10 +201,18 @@ const matchesFilter = (entity: HAEntityView, filter: HAFilter) => {
 
   const state = entity.state.toLowerCase()
   if (filter === 'active') {
+    if (entity.domain === 'automation') {
+      return isAutomationCurrentlyActive(entity)
+    }
+
     return ACTIVE_STATES.has(state)
   }
 
   if (filter === 'inactive') {
+    if (entity.domain === 'automation') {
+      return !isAutomationCurrentlyActive(entity)
+    }
+
     return INACTIVE_STATES.has(state)
   }
 
@@ -322,8 +364,8 @@ export const AutomationPage = () => {
                           <p className="text-xs text-slate-500">{entity.entityId}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStateBadgeClass(entity.state)}`}>
-                            {getAutomationEnabledStateLabel(entity)}
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getEntityStateBadgeClass(entity)}`}>
+                            {getEntityStateLabel(entity)}
                           </span>
                           {commandStatuses[entity.entityId] && (
                             <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
@@ -334,7 +376,10 @@ export const AutomationPage = () => {
                       </div>
 
                       {entity.domain === 'automation' ? (
-                        <p className="mt-2 text-xs text-slate-500">Naposledy spuštěno: {getLastTriggeredDisplay(entity)}</p>
+                        <div className="mt-2 space-y-1 text-xs text-slate-500">
+                          <p>Povolení: {getAutomationEnabledStateLabel(entity)}</p>
+                          <p>Naposledy spuštěno: {getLastTriggeredDisplay(entity)}</p>
+                        </div>
                       ) : (
                         <p className="mt-2 text-xs text-slate-500">Poslední změna: {formatRelativeDate(entity.lastChanged)}</p>
                       )}
