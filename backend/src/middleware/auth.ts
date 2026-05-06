@@ -7,6 +7,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     email?: string;
+    siteId?: string;
     role: 'customer' | 'admin';
   };
   device?: {
@@ -20,6 +21,7 @@ export interface AuthRequest extends Request {
 interface AccessTokenPayload {
   userId: string;
   email?: string;
+  siteId?: string;
   role?: 'customer' | 'admin';
 }
 
@@ -46,6 +48,7 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
     req.user = {
       id: decoded.userId,
       email: decoded.email,
+      siteId: decoded.siteId,
       role: decoded.role || 'customer'
     };
 
@@ -115,6 +118,7 @@ function decodeAccessToken(token: string): AccessTokenPayload | null {
     return {
       userId: parsed.userId,
       email: typeof parsed.email === 'string' ? parsed.email : undefined,
+      siteId: typeof parsed.siteId === 'string' ? parsed.siteId : undefined,
       role: parsed.role === 'admin' ? 'admin' : 'customer'
     };
   } catch {

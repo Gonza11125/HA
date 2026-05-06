@@ -1,52 +1,65 @@
-import express, { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth';
+import { Router, Response } from 'express';
+import { authenticate, AuthRequest } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { listAccessibleSites } from '../services/siteAccessStore';
 
 const router = Router();
 
-// GET /api/sites
-router.get('/', authenticate, async (req: Request, res: Response) => {
+router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    logger.info('Get sites endpoint hit');
-    res.json({ message: 'Seznam lokalit - implementace probíhá' });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Nejste přihlášen' });
+    }
+
+    const sites = listAccessibleSites(req.user.role, req.user.siteId);
+    return res.json({
+      sites,
+      count: sites.length
+    });
   } catch (error) {
     logger.error('Get sites error:', error);
-    res.status(500).json({ error: 'Operace selhala' });
+    return res.status(500).json({ error: 'Operace selhala' });
   }
 });
 
-// GET /api/sites/:id
-router.get('/:id', authenticate, async (req: Request, res: Response) => {
+router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    logger.info('Get site endpoint hit');
-    res.json({ message: 'Detail lokality - implementace probíhá' });
+    if (!req.user) {
+      return res.status(401).json({ error: 'Nejste přihlášen' });
+    }
+
+    const sites = listAccessibleSites(req.user.role, req.user.siteId);
+    const site = sites.find((item) => item.siteId === req.params.id);
+    if (!site) {
+      return res.status(404).json({ error: 'Lokalita nebyla nalezena' });
+    }
+
+    return res.json({ site });
   } catch (error) {
     logger.error('Get site error:', error);
-    res.status(500).json({ error: 'Operace selhala' });
+    return res.status(500).json({ error: 'Operace selhala' });
   }
 });
 
-// POST /api/sites
-router.post('/', authenticate, async (req: Request, res: Response) => {
-  try {
-    logger.info('Create site endpoint hit');
-    res.json({ message: 'Vytvoření lokality - implementace probíhá' });
-  } catch (error) {
-    logger.error('Create site error:', error);
-    res.status(500).json({ error: 'Operace selhala' });
-  }
+router.post('/', authenticate, async (_req: AuthRequest, res: Response) => {
+  return res.status(501).json({ error: 'Vytváření lokalit zatím není implementováno' });
 });
 
-// GET /api/sites/:id/data
-router.get('/:id/data', authenticate, async (req: Request, res: Response) => {
-  try {
-    const { timeRange } = req.query;
-    logger.info('Get site data endpoint hit', { timeRange });
-    res.json({ message: 'Data lokality - implementace probíhá' });
-  } catch (error) {
-    logger.error('Get site data error:', error);
-    res.status(500).json({ error: 'Operace selhala' });
+router.get('/:id/data', authenticate, async (req: AuthRequest, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Nejste přihlášen' });
   }
+
+  const sites = listAccessibleSites(req.user.role, req.user.siteId);
+  const site = sites.find((item) => item.siteId === req.params.id);
+  if (!site) {
+    return res.status(404).json({ error: 'Lokalita nebyla nalezena' });
+  }
+
+  return res.json({
+    site,
+    message: 'Použijte /api/data/* endpointy pro čtení dat lokality.'
+  });
 });
 
 export default router;

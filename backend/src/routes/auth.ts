@@ -3,82 +3,27 @@ import jwt from 'jsonwebtoken';
 import { getCookieDomain, getCookieSameSite, getSessionSecret, shouldUseSecureCookies } from '../config/runtime';
 import { authRateLimiter } from '../middleware/rateLimiter';
 import { logger } from '../utils/logger';
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+import { createSiteAccessCode, findSiteAccessByCode, listSiteAccessCodes } from '../services/siteAccessStore';
 
 const router = Router();
 
-interface AuthState {
-  accessCodeHash: string;
-  createdAt: string;
-}
-
 interface SessionUser {
   userId: string;
-  email?: string;
   fullName?: string;
+  siteId?: string;
   role: 'customer' | 'admin';
   iat: number;
   exp?: number;
 }
 
-const AUTH_STATE_PATH = process.env.AUTH_STATE_FILE || '/data/auth-state.json';
-const CODE_SALT = process.env.AUTH_CODE_SALT || 'solar-portal-access-code-salt';
 const MAX_ATTEMPTS = 10;
 const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 
 let failedAttempts = 0;
 let lastAttemptAt: number | null = null;
 
-function hashCode(accessCode: string): string {
-  return crypto
-    .pbkdf2Sync(accessCode, CODE_SALT, 100000, 64, 'sha256')
-    .toString('hex');
-}
-
 function normalizeCode(code: string): string {
   return String(code || '').trim().toUpperCase().replace(/\s+/g, '');
-}
-
-function createAccessCode(length = 8): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = '';
-  for (let index = 0; index < length; index += 1) {
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return result;
-}
-
-function ensureStateDirectory(): void {
-  const directory = path.dirname(AUTH_STATE_PATH);
-  if (!fs.existsSync(directory)) {
-    fs.mkdirSync(directory, { recursive: true });
-  }
-}
-
-function loadAuthState(): AuthState | null {
-  try {
-    if (!fs.existsSync(AUTH_STATE_PATH)) {
-      return null;
-    }
-
-    const raw = fs.readFileSync(AUTH_STATE_PATH, 'utf-8');
-    const parsed = JSON.parse(raw) as AuthState;
-    if (!parsed.accessCodeHash) {
-      return null;
-    }
-
-    return parsed;
-  } catch (error) {
-    logger.error('Failed to load auth state:', error);
-    return null;
-  }
-}
-
-function saveAuthState(state: AuthState): void {
-  ensureStateDirectory();
-  fs.writeFileSync(AUTH_STATE_PATH, JSON.stringify(state, null, 2), 'utf-8');
 }
 
 function isLocked(): boolean {
@@ -122,9 +67,9 @@ function recordAttempt(valid: boolean): void {
   lastAttemptAt = Date.now();
 }
 
-function encodeSessionToken(user: SessionUser): string {
+function encodeSessionToken(user: SessionUser, rememberMe: boolean): string {
   return jwt.sign(user, getSessionSecret(), {
-    expiresIn: '12h'
+    expiresIn: rememberMe ? '24h' : '12h'
   });
 }
 
@@ -139,6 +84,11 @@ function decodeSessionToken(token: string): SessionUser | null {
     if (!user.userId || !user.role) {
       return null;
     }
+
+    if (user.siteId !== undefined && typeof user.siteId !== 'string') {
+      return null;
+    }
+
     return user;
   } catch {
     return null;
@@ -157,48 +107,52 @@ function getSessionCookieOptions() {
 }
 
 router.get('/registration-status', async (_req: Request, res: Response) => {
-  const state = loadAuthState();
+  const accessCodes = listSiteAccessCodes();
   return res.json({
-    canRegister: !state,
-    hasAccessCode: Boolean(state),
-    usersCount: state ? 1 : 0
+    canRegister: accessCodes.length === 0,
+    hasAccessCode: accessCodes.length > 0,
+    usersCount: accessCodes.length
   });
 });
 
-/**
- * GET /api/auth/password-info
- * Returns information about the installation password
- * This endpoint exists to clearly communicate that password is NOT resettable
- */
 router.get('/password-info', async (_req: Request, res: Response) => {
-  const state = loadAuthState();
+  const accessCodes = listSiteAccessCodes();
   return res.json({
-    hasAccessCode: Boolean(state),
+    hasAccessCode: accessCodes.length > 0,
     message: 'Přístupový kód se generuje jen jednou při prvním spuštění a poté je trvalý.',
     warning: 'Pokud kód ztratíte, nebude možné se přihlásit.'
   });
 });
 
-// POST /api/auth/register
 router.post('/register', authRateLimiter, async (req: Request, res: Response) => {
   try {
-    const existingState = loadAuthState();
-    if (existingState) {
+    const existingCodes = listSiteAccessCodes();
+    if (existingCodes.length > 0) {
       return res.status(409).json({
         error: 'Přístupový kód už je vytvořen. Použijte přihlášení.'
       });
     }
 
-    const accessCode = createAccessCode();
-    saveAuthState({
-      accessCodeHash: hashCode(accessCode),
-      createdAt: new Date().toISOString()
+    const siteId = typeof req.body?.siteId === 'string' && req.body.siteId.trim() ? req.body.siteId.trim() : undefined;
+    const name = typeof req.body?.name === 'string' && req.body.name.trim() ? req.body.name.trim() : 'Administrator';
+    const role = req.body?.role === 'customer' ? 'customer' : 'admin';
+
+    if (role === 'customer' && !siteId) {
+      return res.status(400).json({ error: 'Customer access code musí mít siteId' });
+    }
+
+    const createdAccessCode = createSiteAccessCode({
+      siteId,
+      name,
+      role
     });
 
-    logger.info('Installation access code generated');
+    logger.info('Installation access code generated', { role: createdAccessCode.role, siteId: createdAccessCode.siteId });
     return res.status(201).json({
       message: 'Přístupový kód byl vygenerován',
-      accessCode,
+      accessCode: createdAccessCode.accessCode,
+      siteId: createdAccessCode.siteId,
+      role: createdAccessCode.role,
       warning: 'Kód se zobrazí pouze jednou. Uložte ho na bezpečné místo.'
     });
   } catch (error) {
@@ -207,13 +161,12 @@ router.post('/register', authRateLimiter, async (req: Request, res: Response) =>
   }
 });
 
-// POST /api/auth/login
 router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
   try {
     const { accessCode, rememberMe } = req.body;
-    const state = loadAuthState();
+    const existingCodes = listSiteAccessCodes();
 
-    if (!state) {
+    if (existingCodes.length === 0) {
       return res.status(400).json({ error: 'Přístupový kód ještě nebyl vygenerován.' });
     }
 
@@ -228,10 +181,10 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
       });
     }
 
-    const isValid = hashCode(normalizeCode(accessCode)) === state.accessCodeHash;
-    recordAttempt(isValid);
+    const accessEntry = findSiteAccessByCode(normalizeCode(accessCode));
+    recordAttempt(Boolean(accessEntry));
 
-    if (!isValid) {
+    if (!accessEntry) {
       const remaining = getRemainingAttempts();
       return res.status(401).json({
         error: 'Neplatný přístupový kód',
@@ -239,15 +192,19 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
       });
     }
 
+    if (accessEntry.role === 'customer' && !accessEntry.siteId) {
+      logger.error('Access code is missing siteId', { accessCode: accessEntry.accessCode });
+      return res.status(500).json({ error: 'Přístupový kód není správně nakonfigurovaný' });
+    }
+
     const user: SessionUser = {
-      userId: 'local-installation-user',
-      fullName: 'Instalace',
-      role: 'customer',
+      userId: accessEntry.role === 'admin' ? 'admin' : 'customer',
+      fullName: accessEntry.name,
+      siteId: accessEntry.siteId,
+      role: accessEntry.role,
       iat: Math.floor(Date.now() / 1000)
     };
-    const token = jwt.sign(user, getSessionSecret(), {
-      expiresIn: rememberMe ? '24h' : '12h'
-    });
+    const token = encodeSessionToken(user, Boolean(rememberMe));
     const cookieOptions = getSessionCookieOptions();
 
     const maxAge = rememberMe ? 24 * 60 * 60 * 1000 : undefined;
@@ -256,14 +213,14 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
       maxAge
     });
 
-    logger.info('User logged in with access code');
-
+    logger.info('User logged in with access code', { role: user.role, siteId: user.siteId });
     return res.json({
       message: 'Přihlášení úspěšné',
       user: {
         id: user.userId,
         role: user.role,
-        fullName: user.fullName
+        fullName: user.fullName,
+        siteId: user.siteId
       }
     });
   } catch (error) {
@@ -287,16 +244,15 @@ router.get('/me', async (req: Request, res: Response) => {
     user: {
       id: user.userId,
       role: user.role,
-      fullName: user.fullName
+      fullName: user.fullName,
+      siteId: user.siteId
     }
   });
 });
 
-// POST /api/auth/logout
-router.post('/logout', async (req: Request, res: Response) => {
+router.post('/logout', async (_req: Request, res: Response) => {
   try {
     const cookieOptions = getSessionCookieOptions();
-    // Clear authentication cookies
     res.clearCookie('accessToken', cookieOptions);
     res.clearCookie('refreshToken', cookieOptions);
     logger.info('User logged out');

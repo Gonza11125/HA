@@ -1,5 +1,4 @@
-import express, { Router, Request, Response } from 'express';
-import crypto from 'crypto';
+import { Router, Request, Response } from 'express';
 import { getJwtSecret } from '../config/runtime';
 import { authRateLimiter } from '../middleware/rateLimiter';
 import { authenticate, authenticateDevice, AuthRequest } from '../middleware/auth';
@@ -7,13 +6,11 @@ import { logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 import { updateLiveDataFromAgent } from '../services/liveDataStore';
+import { consumePairingCode, issuePairingCode } from '../services/pairingCodeStore';
 import fs from 'fs';
 
 const router = Router();
 const AGENT_CONFIG_PATH = '/data/agent-config.json';
-const PAIRING_STATE_PATH = process.env.PAIRING_STATE_FILE || '/data/pairing-state.json';
-const PAIRING_CODE_TTL_MS = parseInt(process.env.PAIRING_CODE_TTL_MS || '600000', 10);
-const PAIRING_CODE_SALT = process.env.PAIRING_CODE_SALT || 'solar-portal-pairing-salt';
 
 interface AutomationConfig {
   id: string;
@@ -54,6 +51,7 @@ function getAutomationsFromAgentConfig(): AutomationConfig[] {
 
 interface PairedDevice {
   deviceId: string;
+  siteId: string;
   deviceToken?: string;
   pairingCode?: string;
   pairedAt: string;
@@ -61,98 +59,77 @@ interface PairedDevice {
   status: 'connecting' | 'connected';
 }
 
-interface PairingState {
-  codeHash: string;
-  expiresAt: string;
-  createdAt: string;
-}
-
-// Mock device storage
 const pairedDevices = new Map<string, PairedDevice>();
 
-function normalizePairingCode(value: string): string {
-  return String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+function parseSiteId(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
-function createPairingCode(length = 8): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = '';
-  for (let index = 0; index < length; index += 1) {
-    result += chars[Math.floor(Math.random() * chars.length)];
+function resolveSiteIdForUser(req: AuthRequest, requestedSiteId: unknown): { siteId?: string; status?: number; error?: string } {
+  if (!req.user) {
+    return { status: 401, error: 'Nejste přihlášen' };
   }
-  return result;
-}
 
-function hashPairingCode(pairingCode: string): string {
-  return crypto.createHash('sha256').update(`${PAIRING_CODE_SALT}:${normalizePairingCode(pairingCode)}`).digest('hex');
-}
-
-function ensureStateDirectory(filePath: string): void {
-  const directory = filePath.substring(0, filePath.lastIndexOf('/'));
-  if (directory && !fs.existsSync(directory)) {
-    fs.mkdirSync(directory, { recursive: true });
-  }
-}
-
-function loadPairingState(): PairingState | null {
-  try {
-    if (!fs.existsSync(PAIRING_STATE_PATH)) {
-      return null;
+  const requested = parseSiteId(requestedSiteId);
+  if (req.user.role === 'admin') {
+    if (!requested) {
+      return { status: 400, error: 'siteId je pro admina povinné' };
     }
 
-    const raw = fs.readFileSync(PAIRING_STATE_PATH, 'utf-8');
-    const parsed = JSON.parse(raw) as PairingState;
-    if (!parsed?.codeHash || !parsed?.expiresAt || !parsed?.createdAt) {
-      return null;
-    }
-
-    if (Date.parse(parsed.expiresAt) <= Date.now()) {
-      clearPairingState();
-      return null;
-    }
-
-    return parsed;
-  } catch (error) {
-    logger.warn('Failed to load pairing state', error);
-    return null;
+    return { siteId: requested };
   }
-}
 
-function savePairingState(state: PairingState): void {
-  ensureStateDirectory(PAIRING_STATE_PATH);
-  fs.writeFileSync(PAIRING_STATE_PATH, JSON.stringify(state, null, 2), 'utf-8');
-}
-
-function clearPairingState(): void {
-  try {
-    if (fs.existsSync(PAIRING_STATE_PATH)) {
-      fs.unlinkSync(PAIRING_STATE_PATH);
-    }
-  } catch (error) {
-    logger.warn('Failed to clear pairing state', error);
+  if (!req.user.siteId) {
+    return { status: 403, error: 'Uživatel nemá přiřazený siteId' };
   }
+
+  if (requested && requested !== req.user.siteId) {
+    return { status: 403, error: 'Nemáte přístup k jiné lokalitě' };
+  }
+
+  return { siteId: req.user.siteId };
 }
 
-function issuePairingCode(): { pairingCode: string; expiresAt: string } {
-  const pairingCode = createPairingCode();
-  const expiresAt = new Date(Date.now() + PAIRING_CODE_TTL_MS).toISOString();
+function listPairedDevices(siteId?: string): PairedDevice[] {
+  const devices = Array.from(pairedDevices.values());
+  if (!siteId) {
+    return devices;
+  }
 
-  savePairingState({
-    codeHash: hashPairingCode(pairingCode),
-    expiresAt,
-    createdAt: new Date().toISOString()
-  });
-
-  return { pairingCode, expiresAt };
+  return devices.filter((device) => device.siteId === siteId);
 }
 
-// GET /api/agent/pairing-code - Generate short-lived pairing code for current installation
-router.get('/pairing-code', authenticate, async (_req: Request, res: Response) => {
-  const { pairingCode, expiresAt } = issuePairingCode();
-  return res.json({ pairingCode, expiresAt });
+function buildStatusResponse(siteId?: string) {
+  const devices = listPairedDevices(siteId);
+  const latestDevice = devices[0];
+
+  return {
+    isPaired: devices.length > 0,
+    deviceId: latestDevice?.deviceId,
+    siteId: siteId || latestDevice?.siteId,
+    devices: devices.map((device) => ({
+      deviceId: device.deviceId,
+      siteId: device.siteId,
+      pairedAt: device.pairedAt,
+      lastSyncAt: device.lastSyncAt || null,
+      status: device.status
+    })),
+    haUrl: 'http://192.168.1.100:8123 (hidden)',
+    lastDataSync: latestDevice?.lastSyncAt || null,
+    connectionStatus: devices.some((device) => device.status === 'connected') ? 'connected' : 'disconnected'
+  };
+}
+
+router.get('/pairing-code', authenticate, async (req: AuthRequest, res: Response) => {
+  const resolvedSite = resolveSiteIdForUser(req, req.query.siteId);
+  if (resolvedSite.status) {
+    return res.status(resolvedSite.status).json({ error: resolvedSite.error });
+  }
+
+  const { pairingCode, expiresAt, siteId } = issuePairingCode(resolvedSite.siteId!);
+  return res.json({ pairingCode, expiresAt, siteId });
 });
 
-// POST /api/agent/pair - Pair a new Raspberry Pi device
 router.post('/pair', authRateLimiter, async (req: Request, res: Response) => {
   try {
     const { pairingCode } = req.body;
@@ -161,20 +138,16 @@ router.post('/pair', authRateLimiter, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Párovací kód je povinný' });
     }
 
-    const pairingState = loadPairingState();
+    const pairingState = consumePairingCode(String(pairingCode));
     if (!pairingState) {
-      return res.status(410).json({ error: 'Párovací kód chybí nebo vypršel. Vygenerujte nový v portálu.' });
-    }
-
-    if (hashPairingCode(String(pairingCode)) !== pairingState.codeHash) {
-      return res.status(400).json({ error: 'Neplatný párovací kód' });
+      return res.status(410).json({ error: 'Párovací kód je neplatný nebo vypršel. Vygenerujte nový v portálu.' });
     }
 
     const deviceId = uuidv4();
     const deviceToken = jwt.sign(
       {
         deviceId,
-        siteId: 'demo-site'
+        siteId: pairingState.siteId
       },
       getJwtSecret(),
       {
@@ -182,23 +155,24 @@ router.post('/pair', authRateLimiter, async (req: Request, res: Response) => {
       }
     );
 
-    const device = {
+    const device: PairedDevice = {
       deviceId,
+      siteId: pairingState.siteId,
       deviceToken,
-      pairingCode,
+      pairingCode: pairingState.pairingCode,
       pairedAt: new Date().toISOString(),
       lastSyncAt: null,
-      status: 'connecting' as const
+      status: 'connecting'
     };
 
     pairedDevices.set(deviceId, device);
-  clearPairingState();
-    logger.info(`Device paired: ${deviceId}`);
+    logger.info(`Device paired: ${deviceId}`, { siteId: pairingState.siteId });
 
     return res.status(201).json({
       deviceId,
       deviceToken,
-      pairedAt: device.pairedAt
+      pairedAt: device.pairedAt,
+      siteId: device.siteId
     });
   } catch (error) {
     logger.error('Device pairing error:', error);
@@ -206,33 +180,50 @@ router.post('/pair', authRateLimiter, async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/agent/status - Get device status
-router.get('/status', authenticate, async (req: Request, res: Response) => {
+router.get('/status', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const mockStatus = {
-      isPaired: pairedDevices.size > 0,
-      deviceId: Array.from(pairedDevices.keys())[0],
-      haUrl: 'http://192.168.1.100:8123 (hidden)',
-      lastDataSync: new Date(Date.now() - 5000).toISOString(),
-      connectionStatus: pairedDevices.size > 0 ? 'connected' : 'disconnected'
-    };
+    if (req.user?.role === 'admin' && !parseSiteId(req.query.siteId)) {
+      const sites = Array.from(new Set(Array.from(pairedDevices.values()).map((device) => device.siteId)));
+      return res.json({
+        sites: sites.reduce<Record<string, ReturnType<typeof buildStatusResponse>>>((accumulator, siteId) => {
+          accumulator[siteId] = buildStatusResponse(siteId);
+          return accumulator;
+        }, {})
+      });
+    }
 
-    return res.json(mockStatus);
+    const resolvedSite = resolveSiteIdForUser(req, req.query.siteId);
+    if (resolvedSite.status) {
+      return res.status(resolvedSite.status).json({ error: resolvedSite.error });
+    }
+
+    return res.json(buildStatusResponse(resolvedSite.siteId));
   } catch (error) {
     logger.error('Get device status error:', error);
     return res.status(500).json({ error: 'Nepodařilo se získat stav zařízení' });
   }
 });
 
-// POST /api/agent/unpair - Unpair a device
-router.post('/unpair', authenticate, async (req: Request, res: Response) => {
+router.post('/unpair', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { deviceId } = req.body;
 
-    if (deviceId && pairedDevices.has(deviceId)) {
-      pairedDevices.delete(deviceId);
-      logger.info(`Device unpaired: ${deviceId}`);
+    if (!deviceId || typeof deviceId !== 'string') {
+      return res.status(400).json({ error: 'deviceId je povinné' });
     }
+
+    const device = pairedDevices.get(deviceId);
+    if (!device) {
+      return res.status(404).json({ error: 'Zařízení nebylo nalezeno' });
+    }
+
+    const resolvedSite = resolveSiteIdForUser(req, device.siteId);
+    if (resolvedSite.status) {
+      return res.status(resolvedSite.status).json({ error: resolvedSite.error });
+    }
+
+    pairedDevices.delete(deviceId);
+    logger.info(`Device unpaired: ${deviceId}`, { siteId: device.siteId });
 
     return res.json({ message: 'Zařízení bylo úspěšně odpárováno' });
   } catch (error) {
@@ -241,7 +232,6 @@ router.post('/unpair', authenticate, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/agent/push - Agent pushes real-time data
 router.post('/push', authenticateDevice, async (req: AuthRequest, res: Response) => {
   try {
     const { timestamp, metrics } = req.body;
@@ -250,16 +240,28 @@ router.post('/push', authenticateDevice, async (req: AuthRequest, res: Response)
       return res.status(400).json({ error: 'Chybí povinná pole' });
     }
 
-    if (req.device?.id && !pairedDevices.has(req.device.id)) {
-      pairedDevices.set(req.device.id, {
-        deviceId: req.device.id,
-        pairedAt: new Date().toISOString(),
-        status: 'connected'
-      });
+    if (!req.device?.id || !req.device.siteId) {
+      return res.status(401).json({ error: 'Neplatný token zařízení' });
     }
 
-    logger.info('Data received from agent:', { timestamp, metrics });
-    updateLiveDataFromAgent({ timestamp, metrics });
+    const existingDevice = pairedDevices.get(req.device.id);
+    pairedDevices.set(req.device.id, {
+      deviceId: req.device.id,
+      siteId: req.device.siteId,
+      deviceToken: existingDevice?.deviceToken,
+      pairingCode: existingDevice?.pairingCode,
+      pairedAt: existingDevice?.pairedAt || new Date().toISOString(),
+      lastSyncAt: timestamp,
+      status: 'connected'
+    });
+
+    logger.info('Data received from agent:', { siteId: req.device.siteId, deviceId: req.device.id, timestamp, metrics });
+    updateLiveDataFromAgent({
+      siteId: req.device.siteId,
+      deviceId: req.device.id,
+      timestamp,
+      metrics
+    });
     return res.json({ message: 'Data byla úspěšně přijata' });
   } catch (error) {
     logger.error('Agent push error:', error);
@@ -267,8 +269,7 @@ router.post('/push', authenticateDevice, async (req: AuthRequest, res: Response)
   }
 });
 
-// GET /api/agent/config - Get agent configuration
-router.get('/config', authenticate, async (req: Request, res: Response) => {
+router.get('/config', authenticate, async (_req: Request, res: Response) => {
   try {
     const haAutomations = getAutomationsFromAgentConfig();
     const config = {
@@ -290,8 +291,7 @@ router.get('/config', authenticate, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/agent/ping - Health check from agent
-router.post('/ping', authenticateDevice, async (req: Request, res: Response) => {
+router.post('/ping', authenticateDevice, async (_req: Request, res: Response) => {
   try {
     return res.json({
       status: 'ok',
